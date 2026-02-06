@@ -1,0 +1,143 @@
+"""
+Data models for GeoClear AI Geometry Engine
+Handles request/response structures for geometry processing
+"""
+from pydantic import BaseModel, Field
+from typing import List, Optional, Dict, Any
+from enum import Enum
+
+
+class FeaturePriority(str, Enum):
+    """Feature priority levels"""
+    P1_HIGHWAY = "P1_HIGHWAY"  # Width 5pt
+    P2_ROAD = "P2_ROAD"        # Width 3pt
+
+
+class FeatureInput(BaseModel):
+    """Input feature with WKT geometry"""
+    id: str = Field(..., description="Unique identifier for the feature")
+    wkt: str = Field(..., description="WKT LINESTRING geometry")
+    priority: FeaturePriority = Field(..., description="Feature priority level")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "id": "highway_001",
+                "wkt": "LINESTRING(7071.42 8585.63, 7074.67 8588.81)",
+                "priority": "P1_HIGHWAY"
+            }
+        }
+
+
+class GeometryRequest(BaseModel):
+    """Request for geometry processing"""
+    features: List[FeatureInput] = Field(..., description="List of input features")
+    min_clearance: float = Field(default=2.0, description="Minimum clearance in points")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "features": [
+                    {
+                        "id": "highway_001",
+                        "wkt": "LINESTRING(7071.42 8585.63, 7074.67 8588.81)",
+                        "priority": "P1_HIGHWAY"
+                    },
+                    {
+                        "id": "road_001",
+                        "wkt": "LINESTRING(7071.50 8585.70, 7074.70 8588.85)",
+                        "priority": "P2_ROAD"
+                    }
+                ],
+                "min_clearance": 2.0
+            }
+        }
+
+
+class ConflictMetadata(BaseModel):
+    """Metadata about a detected conflict"""
+    conflict_pair: List[str] = Field(..., description="IDs of conflicting features")
+    displacement_vector: List[float] = Field(..., description="[dx, dy] displacement applied")
+    overlap_amount: float = Field(..., description="Amount of overlap detected in points")
+    z_index: Optional[int] = Field(None, description="Z-order for 3D depth rendering")
+    visual_depth_flag: bool = Field(default=False, description="Flag for shadow/depth rendering")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "conflict_pair": ["highway_001", "road_001"],
+                "displacement_vector": [1.5, 0.8],
+                "overlap_amount": 2.3,
+                "z_index": 1,
+                "visual_depth_flag": True
+            }
+        }
+
+
+class DisplacementResult(BaseModel):
+    """Result of displacement processing for a single feature"""
+    feature_id: str = Field(..., description="Feature identifier")
+    original_wkt: str = Field(..., description="Original WKT geometry")
+    corrected_wkt: str = Field(..., description="Corrected WKT geometry after displacement")
+    was_displaced: bool = Field(..., description="Whether this feature was displaced")
+    metadata: Optional[ConflictMetadata] = Field(None, description="Conflict metadata if displaced")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "feature_id": "road_001",
+                "original_wkt": "LINESTRING(7071.50 8585.70, 7074.70 8588.85)",
+                "corrected_wkt": "LINESTRING(7073.00 8586.50, 7076.20 8589.65)",
+                "was_displaced": True,
+                "metadata": {
+                    "conflict_pair": ["highway_001", "road_001"],
+                    "displacement_vector": [1.5, 0.8],
+                    "overlap_amount": 2.3,
+                    "z_index": 1,
+                    "visual_depth_flag": True
+                }
+            }
+        }
+
+
+class GeometryResponse(BaseModel):
+    """Response containing processed geometry results"""
+    results: List[DisplacementResult] = Field(..., description="List of processing results")
+    total_conflicts: int = Field(..., description="Total number of conflicts detected")
+    total_displaced: int = Field(..., description="Total number of features displaced")
+    processing_summary: Dict[str, Any] = Field(default_factory=dict, description="Processing statistics")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "results": [
+                    {
+                        "feature_id": "highway_001",
+                        "original_wkt": "LINESTRING(7071.42 8585.63, 7074.67 8588.81)",
+                        "corrected_wkt": "LINESTRING(7071.42 8585.63, 7074.67 8588.81)",
+                        "was_displaced": False,
+                        "metadata": None
+                    },
+                    {
+                        "feature_id": "road_001",
+                        "original_wkt": "LINESTRING(7071.50 8585.70, 7074.70 8588.85)",
+                        "corrected_wkt": "LINESTRING(7073.00 8586.50, 7076.20 8589.65)",
+                        "was_displaced": True,
+                        "metadata": {
+                            "conflict_pair": ["highway_001", "road_001"],
+                            "displacement_vector": [1.5, 0.8],
+                            "overlap_amount": 2.3,
+                            "z_index": 1,
+                            "visual_depth_flag": True
+                        }
+                    }
+                ],
+                "total_conflicts": 1,
+                "total_displaced": 1,
+                "processing_summary": {
+                    "features_processed": 2,
+                    "highways": 1,
+                    "roads": 1
+                }
+            }
+        }

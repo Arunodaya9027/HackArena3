@@ -23,7 +23,7 @@ public class WktIngestionService {
 
     /**
      * Load WKT features from a file
-     * Each line should contain a LINESTRING WKT
+     * Handles both single-line and multi-line LINESTRING entries
      * 
      * @param filePath        Path to WKT file
      * @param defaultPriority Default priority to assign to features
@@ -37,19 +37,47 @@ public class WktIngestionService {
             throw new IOException("WKT file not found: " + filePath);
         }
 
-        List<String> lines = FileUtils.readLines(file, StandardCharsets.UTF_8);
+        String content = FileUtils.readFileToString(file, StandardCharsets.UTF_8);
         List<FeatureInput> features = new ArrayList<>();
 
+        // Parse multi-line WKT entries
+        StringBuilder currentWkt = new StringBuilder();
         int featureId = 1;
+
+        String[] lines = content.split("\n");
+
         for (String line : lines) {
             line = line.trim();
-            if (line.isEmpty() || !line.startsWith("LINESTRING")) {
+
+            if (line.isEmpty()) {
                 continue;
             }
 
-            String id = generateFeatureId(defaultPriority, featureId++);
-            FeatureInput feature = new FeatureInput(id, line, defaultPriority);
-            features.add(feature);
+            // Start of new WKT entry
+            if (line.startsWith("LINESTRING")) {
+                // Save previous WKT if exists
+                if (currentWkt.length() > 0) {
+                    String wkt = normalizeWkt(currentWkt.toString());
+                    if (isValidWkt(wkt)) {
+                        String id = generateFeatureId(defaultPriority, featureId++);
+                        features.add(new FeatureInput(id, wkt, defaultPriority));
+                    }
+                    currentWkt.setLength(0);
+                }
+                currentWkt.append(line);
+            } else {
+                // Continuation of current WKT (multi-line entry)
+                currentWkt.append(" ").append(line);
+            }
+        }
+
+        // Don't forget the last entry
+        if (currentWkt.length() > 0) {
+            String wkt = normalizeWkt(currentWkt.toString());
+            if (isValidWkt(wkt)) {
+                String id = generateFeatureId(defaultPriority, featureId++);
+                features.add(new FeatureInput(id, wkt, defaultPriority));
+            }
         }
 
         logger.info("Loaded {} features from WKT file", features.size());
@@ -57,7 +85,21 @@ public class WktIngestionService {
     }
 
     /**
+     * Normalize WKT string by removing extra whitespace and newlines
+     */
+    private String normalizeWkt(String wkt) {
+        // Remove extra whitespace, newlines, and normalize spaces
+        return wkt.replaceAll("\\s+", " ")
+                .replaceAll("\\( ", "(")
+                .replaceAll(" \\)", ")")
+                .replaceAll(" ,", ",")
+                .replaceAll(", ", ",")
+                .trim();
+    }
+
+    /**
      * Load WKT features with mixed priorities based on heuristics
+     * Handles both single-line and multi-line LINESTRING entries
      * This is a simplified approach - in real scenario, priorities would come from
      * attributes
      */
@@ -69,31 +111,61 @@ public class WktIngestionService {
             throw new IOException("WKT file not found: " + filePath);
         }
 
-        List<String> lines = FileUtils.readLines(file, StandardCharsets.UTF_8);
+        String content = FileUtils.readFileToString(file, StandardCharsets.UTF_8);
         List<FeatureInput> features = new ArrayList<>();
 
         int highwayId = 1;
         int roadId = 1;
 
+        // Parse multi-line WKT entries
+        StringBuilder currentWkt = new StringBuilder();
+
+        String[] lines = content.split("\n");
+
         for (String line : lines) {
             line = line.trim();
-            if (line.isEmpty() || !line.startsWith("LINESTRING")) {
+
+            if (line.isEmpty()) {
                 continue;
             }
 
-            // Simple heuristic: longer features are highways
-            // In real scenario, this would come from attributes
-            FeaturePriority priority = detectPriority(line);
-
-            String id;
-            if (priority == FeaturePriority.P1_HIGHWAY) {
-                id = generateFeatureId(priority, highwayId++);
+            // Start of new WKT entry
+            if (line.startsWith("LINESTRING")) {
+                // Save previous WKT if exists
+                if (currentWkt.length() > 0) {
+                    String wkt = normalizeWkt(currentWkt.toString());
+                    if (isValidWkt(wkt)) {
+                        FeaturePriority priority = detectPriority(wkt);
+                        String id;
+                        if (priority == FeaturePriority.P1_HIGHWAY) {
+                            id = generateFeatureId(priority, highwayId++);
+                        } else {
+                            id = generateFeatureId(priority, roadId++);
+                        }
+                        features.add(new FeatureInput(id, wkt, priority));
+                    }
+                    currentWkt.setLength(0);
+                }
+                currentWkt.append(line);
             } else {
-                id = generateFeatureId(priority, roadId++);
+                // Continuation of current WKT (multi-line entry)
+                currentWkt.append(" ").append(line);
             }
+        }
 
-            FeatureInput feature = new FeatureInput(id, line, priority);
-            features.add(feature);
+        // Don't forget the last entry
+        if (currentWkt.length() > 0) {
+            String wkt = normalizeWkt(currentWkt.toString());
+            if (isValidWkt(wkt)) {
+                FeaturePriority priority = detectPriority(wkt);
+                String id;
+                if (priority == FeaturePriority.P1_HIGHWAY) {
+                    id = generateFeatureId(priority, highwayId++);
+                } else {
+                    id = generateFeatureId(priority, roadId++);
+                }
+                features.add(new FeatureInput(id, wkt, priority));
+            }
         }
 
         logger.info("Loaded {} features (highways + roads) from WKT file", features.size());
@@ -121,12 +193,75 @@ public class WktIngestionService {
 
     /**
      * Validate WKT string
+     * Checks for proper LINESTRING format with balanced parentheses
      */
     public boolean isValidWkt(String wkt) {
-        return wkt != null &&
-                !wkt.trim().isEmpty() &&
-                wkt.trim().startsWith("LINESTRING") &&
-                wkt.contains("(") &&
-                wkt.contains(")");
+        if (wkt == null || wkt.trim().isEmpty()) {
+            return false;
+        }
+
+        String normalized = wkt.trim();
+
+        // Must start with LINESTRING
+        if (!normalized.startsWith("LINESTRING")) {
+            return false;
+        }
+
+        // Must contain opening and closing parentheses
+        if (!normalized.contains("(") || !normalized.contains(")")) {
+            return false;
+        }
+
+        // Check balanced parentheses
+        int openCount = 0;
+        int closeCount = 0;
+        for (char c : normalized.toCharArray()) {
+            if (c == '(')
+                openCount++;
+            if (c == ')')
+                closeCount++;
+        }
+
+        if (openCount != closeCount || openCount == 0) {
+            return false;
+        }
+
+        // Must end with closing parenthesis (after trimming)
+        if (!normalized.trim().endsWith(")")) {
+            return false;
+        }
+
+        // Extract coordinates part
+        int startIdx = normalized.indexOf('(');
+        int endIdx = normalized.lastIndexOf(')');
+
+        if (startIdx >= endIdx) {
+            return false;
+        }
+
+        String coordsPart = normalized.substring(startIdx + 1, endIdx).trim();
+
+        // Must have at least 2 coordinate pairs for a valid LINESTRING
+        String[] coords = coordsPart.split(",");
+        if (coords.length < 2) {
+            return false;
+        }
+
+        // Check that each coordinate pair has 2 numbers (x y)
+        for (String coord : coords) {
+            String[] parts = coord.trim().split("\\s+");
+            if (parts.length < 2) {
+                return false;
+            }
+            // Validate that they are numbers
+            try {
+                Double.parseDouble(parts[0]);
+                Double.parseDouble(parts[1]);
+            } catch (NumberFormatException e) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

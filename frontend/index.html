@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Axes Systems - Dashboard</title>
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --accent: #8b5cf6;
+            --bg-dark: #0f172a;
+            --panel-bg: rgba(30, 41, 59, 0.75);
+            --border: rgba(255, 255, 255, 0.1);
+            --text-main: #f8fafc;
+            --text-dim: #94a3b8;
+            --success: #22c55e;
+            --danger: #ef4444;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background: var(--bg-dark);
+            color: var(--text-main);
+            min-height: 100vh;
+        }
+
+        header {
+            background: rgba(15, 23, 42, 0.9);
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border);
+            padding: 20px 40px;
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            background: linear-gradient(to right, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .status-indicators {
+            display: flex;
+            gap: 20px;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            font-size: 0.85rem;
+            border: 1px solid var(--border);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.offline {
+            background: var(--danger);
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 40px auto;
+            padding: 0 40px;
+        }
+
+        .hero {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .hero h2 {
+            font-size: 2.5rem;
+            margin-bottom: 16px;
+            background: linear-gradient(to right, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            color: var(--text-dim);
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 24px;
+            margin-bottom: 40px;
+        }
+
+        .card {
+            background: var(--panel-bg);
+            -webkit-backdrop-filter: blur(16px);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 30px;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(59, 130, 246, 0.2);
+            border-color: var(--primary);
+        }
+
+        .card-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            margin-bottom: 20px;
+        }
+
+        .card h3 {
+            font-size: 1.4rem;
+            margin-bottom: 12px;
+            color: var(--text-main);
+        }
+
+        .card p {
+            color: var(--text-dim);
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .card-features {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+            color: var(--text-dim);
+        }
+
+        .feature-check {
+            color: var(--success);
+            font-weight: bold;
+        }
+
+        .card-action {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--primary);
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .info-section {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 30px;
+            margin-top: 40px;
+        }
+
+        .info-section h3 {
+            font-size: 1.3rem;
+            margin-bottom: 16px;
+            color: var(--text-main);
+        }
+
+        .priority-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 16px;
+            margin-top: 20px;
+        }
+
+        .priority-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .priority-icon {
+            font-size: 2rem;
+            margin-bottom: 8px;
+        }
+
+        .priority-label {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .priority-desc {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+        }
+
+        footer {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-dim);
+            border-top: 1px solid var(--border);
+            margin-top: 60px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <h1>🌍 Axes Systems</h1>
+            <div class="status-indicators">
+                <div class="status-badge">
+                    <div class="status-dot" id="java-status"></div>
+                    <span>Java API</span>
+                </div>
+                <div class="status-badge">
+                    <div class="status-dot" id="python-status"></div>
+                    <span>Python Engine</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="hero">
+            <h2>Geospatial Displacement System</h2>
+            <p>Advanced multi-page platform combining real-time OSM mapping, WKT file processing, and comprehensive API testing</p>
+        </div>
+
+        <div class="cards-grid">
+            <!-- Live OSM Map Card -->
+            <div class="card" onclick="window.location.href='map-live.html'">
+                <!-- <div class="card-icon">🗺️</div> -->
+                <h3>Live OSM Map</h3>
+                <p>Interactive mapping with real-time OpenStreetMap data and traffic simulation</p>
+                <div class="card-features">
+                    <div class="feature-item">
+                        <span class="feature-check">✓</span>
+                        <span>Area selection & displacement</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-check">✓</span>
+                        <span>Before/After comparison</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-check">✓</span>
+                        <span>Traffic flow animation</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-check">✓</span>
+                        <span>Real-time metrics</span>
+                    </div>
+                </div>
+                <div class="card-action">
+                    Open Live Map →
+                </div>
+            </div>
+
+            <!-- WKT Details Viewer Card -->
+            <div class="card" onclick="window.location.href='wkt-processor-charts.html'">
+                <!-- <div class="card-icon">📁</div> -->
+                <h3>WKT Details Viewer</h3>
+                <p>Upload WKT files and view comprehensive feature details without maps</p>
+                <div class="card-features">
+                    <div class="feature-item">
+                        <span class="feature-check">✓</span>
+                        <span>Upload WKT files</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-check">✓</span>
+                        <span>Detailed feature metrics</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-check">✓</span>
+                        <span>Displacement analysis</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-check">✓</span>
+                        <span>Backend-powered processing</span>
+                    </div>
+                </div>
+                <div class="card-action">
+                    Open Details Viewer →
+                </div>
+            </div>
+
+            <!-- API Testing Dashboard Card -->
+            <div class="card" onclick="window.location.href='api-testing.html'">
+                <!-- <div class="card-icon">⚡</div> -->
+                <h3>API Testing Dashboard</h3>
+                <p>Test and monitor backend APIs with comprehensive endpoint testing</p>
+                <div class="card-features">
+                    <div class="feature-item">
+                        <span class="feature-check">✓</span>
+                        <span>Health checks</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-check">✓</span>
+                        <span>WKT processing tests</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-check">✓</span>
+                        <span>Feature details API</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-check">✓</span>
+                        <span>Real-time logging</span>
+                    </div>
+                </div>
+                <div class="card-action">
+                    Test APIs →
+                </div>
+            </div>
+        </div>
+
+        <div class="info-section">
+            <h3>Priority Classification System</h3>
+            <p style="color: var(--text-dim); margin-bottom: 20px;">
+                Features are classified into 5 priority levels. Higher priority features stay in place while lower priority features are displaced.
+            </p>
+            <div class="priority-grid">
+                <div class="priority-card">
+                    <!-- <div class="priority-icon">🛣️</div> -->
+                    <div class="priority-label" style="color: #E63946;">P1: Highway</div>
+                    <div class="priority-desc">Width 5pt<br>Never moves<br>Z-index: 100</div>
+                </div>
+                <div class="priority-card">
+                    <!-- <div class="priority-icon">🚗</div> -->
+                    <div class="priority-label" style="color: #F4A261;">P2: Road</div>
+                    <div class="priority-desc">Width 3pt<br>20% movement<br>Z-index: 80</div>
+                </div>
+                <div class="priority-card">
+                    <!-- <div class="priority-icon">🚕</div> -->
+                    <div class="priority-label" style="color: #E9C46A;">P3: Secondary</div>
+                    <div class="priority-desc">Width 2pt<br>40% movement<br>Z-index: 60</div>
+                </div>
+                <div class="priority-card">
+                    <!-- <div class="priority-icon">🚙</div> -->
+                    <div class="priority-label" style="color: #A8DADC;">P4: Tertiary</div>
+                    <div class="priority-desc">Width 2pt<br>60% movement<br>Z-index: 40</div>
+                </div>
+                <div class="priority-card">
+                    <!-- <div class="priority-icon">📍</div> -->
+                    <div class="priority-label" style="color: #6C757D;">P5: Minor</div>
+                    <div class="priority-desc">Width 1pt<br>90% movement<br>Z-index: 20</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p><strong>Axes Systems</strong> - Geospatial Conflict Resolution System</p>
+        <p style="margin-top: 8px; font-size: 0.9rem;">Java Orchestration + Python Geometry Engine + Beautiful Frontend</p>
+    </footer>
+
+    <script>
+        // Check backend health
+        async function checkHealth() {
+            try {
+                const javaRes = await fetch('http://localhost:8085/api/health', { method: 'GET' });
+                const javaStatus = document.getElementById('java-status');
+                if (javaRes.ok) {
+                    javaStatus.classList.remove('offline');
+                } else {
+                    javaStatus.classList.add('offline');
+                }
+            } catch (e) {
+                document.getElementById('java-status').classList.add('offline');
+            }
+
+            try {
+                const pythonRes = await fetch('http://localhost:8002/api/health', { method: 'GET' });
+                const pythonStatus = document.getElementById('python-status');
+                if (pythonRes.ok) {
+                    pythonStatus.classList.remove('offline');
+                } else {
+                    pythonStatus.classList.add('offline');
+                }
+            } catch (e) {
+                document.getElementById('python-status').classList.add('offline');
+            }
+        }
+
+        // Check on load and every 10 seconds
+        checkHealth();
+        setInterval(checkHealth, 10000);
+    </script>
+</body>
+</html>

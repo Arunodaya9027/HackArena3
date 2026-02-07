@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Testing Dashboard - Axes Systems</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --success: #22c55e;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --bg-dark: #0f172a;
+            --panel-bg: rgba(30, 41, 59, 0.95);
+            --border: rgba(255, 255, 255, 0.1);
+            --text-main: #f8fafc;
+            --text-dim: #94a3b8;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background: var(--bg-dark);
+            color: var(--text-main);
+            min-height: 100vh;
+        }
+
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 1001;
+            padding: 15px 24px;
+            background: rgba(15, 23, 42, 0.95);
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header h1 {
+            font-size: 1.2rem;
+            font-weight: 700;
+            background: linear-gradient(to right, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-back {
+            color: var(--text-dim);
+            text-decoration: none;
+            padding: 8px 16px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+
+        .nav-back:hover {
+            color: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        .server-status {
+            background: var(--panel-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.online {
+            background: var(--success);
+        }
+
+        .status-dot.offline {
+            background: var(--danger);
+            animation: none;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .endpoint-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        .endpoint-card {
+            background: var(--panel-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .endpoint-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .method-badge {
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .method-get {
+            background: rgba(34, 197, 94, 0.2);
+            color: var(--success);
+        }
+
+        .method-post {
+            background: rgba(59, 130, 246, 0.2);
+            color: var(--primary);
+        }
+
+        .endpoint-path {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--text-dim);
+        }
+
+        .param-group {
+            margin-bottom: 16px;
+        }
+
+        .param-group label {
+            display: block;
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            margin-bottom: 6px;
+        }
+
+        input[type="text"], textarea, select {
+            width: 100%;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-main);
+            font-size: 0.85rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+        }
+
+        .btn-test {
+            background: linear-gradient(135deg, var(--primary), #8b5cf6);
+            color: white;
+        }
+
+        .btn-test:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+
+        .btn-test:disabled {
+            background: #334155;
+            color: #64748b;
+            cursor: not-allowed;
+        }
+
+        .response-panel {
+            margin-top: 16px;
+            padding: 16px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .response-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .status-code {
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .status-200 {
+            background: rgba(34, 197, 94, 0.2);
+            color: var(--success);
+        }
+
+        .status-400, .status-404, .status-500 {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+        }
+
+        .response-time {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .response-body {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .logs-section {
+            background: var(--panel-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .logs-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .btn-clear {
+            padding: 8px 16px;
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            font-size: 0.8rem;
+        }
+
+        .logs-container {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+        }
+
+        .log-entry {
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+
+        .log-timestamp {
+            color: var(--text-dim);
+            margin-right: 12px;
+        }
+
+        .log-success {
+            color: var(--success);
+        }
+
+        .log-error {
+            color: var(--danger);
+        }
+
+        .log-info {
+            color: var(--primary);
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🧪 API Testing Dashboard</h1>
+        <a href="index.html" class="nav-back">← Back to Dashboard</a>
+    </header>
+
+    <div class="container">
+        <div class="server-status">
+            <div class="status-item">
+                <div class="status-dot offline" id="status-java"></div>
+                <div>
+                    <strong>Java Backend</strong>
+                    <div class="endpoint-path">http://localhost:8085</div>
+                </div>
+            </div>
+            <div class="status-item">
+                <div class="status-dot offline" id="status-python"></div>
+                <div>
+                    <strong>Python Backend</strong>
+                    <div class="endpoint-path">http://localhost:8002</div>
+                </div>
+            </div>
+            <button onclick="checkAllServers()" style="width: auto; padding: 8px 20px;">
+                🔄 Check Status
+            </button>
+        </div>
+
+        <div class="endpoint-grid">
+            <!-- Health Check -->
+            <div class="endpoint-card">
+                <div class="endpoint-header">
+                    <div>
+                        <span class="method-badge method-get">GET</span>
+                        <span style="margin-left: 8px; font-weight: 600;">Health Check</span>
+                    </div>
+                </div>
+                <div class="endpoint-path">/api/health</div>
+                <div class="param-group" style="margin-top: 16px;">
+                    <label>Server:</label>
+                    <select id="health-server">
+                        <option value="http://localhost:8085">Java (8085)</option>
+                        <option value="http://localhost:8002">Python (8002)</option>
+                    </select>
+                </div>
+                <button class="btn-test" onclick="testHealth()">🚀 Test</button>
+                <div id="response-health" class="response-panel" style="display:none;"></div>
+            </div>
+
+            <!-- WKT Processing -->
+            <div class="endpoint-card">
+                <div class="endpoint-header">
+                    <div>
+                        <span class="method-badge method-post">POST</span>
+                        <span style="margin-left: 8px; font-weight: 600;">Process WKT</span>
+                    </div>
+                </div>
+                <div class="endpoint-path">/api/wkt/process</div>
+                <div class="param-group" style="margin-top: 16px;">
+                    <label>WKT Content:</label>
+                    <textarea id="wkt-content" placeholder="LINESTRING(6.9 50.9, 6.91 50.91)"></textarea>
+                </div>
+                <button class="btn-test" onclick="testWktProcess()">🚀 Test</button>
+                <div id="response-wkt" class="response-panel" style="display:none;"></div>
+            </div>
+
+            <!-- Feature Details -->
+            <div class="endpoint-card">
+                <div class="endpoint-header">
+                    <div>
+                        <span class="method-badge method-get">GET</span>
+                        <span style="margin-left: 8px; font-weight: 600;">Feature Details</span>
+                    </div>
+                </div>
+                <div class="endpoint-path">/api/features/{id}</div>
+                <div class="param-group" style="margin-top: 16px;">
+                    <label>Feature ID:</label>
+                    <input type="text" id="feature-id" placeholder="street_001">
+                </div>
+                <button class="btn-test" onclick="testFeatureDetails()">🚀 Test</button>
+                <div id="response-feature" class="response-panel" style="display:none;"></div>
+            </div>
+
+            <!-- Displacement -->
+            <div class="endpoint-card">
+                <div class="endpoint-header">
+                    <div>
+                        <span class="method-badge method-post">POST</span>
+                        <span style="margin-left: 8px; font-weight: 600;">Displacement</span>
+                    </div>
+                </div>
+                <div class="endpoint-path">/api/displacement</div>
+                <div class="param-group" style="margin-top: 16px;">
+                    <label>Features JSON:</label>
+                    <textarea id="displacement-json" placeholder='{"features":[...]}'></textarea>
+                </div>
+                <button class="btn-test" onclick="testDisplacement()">🚀 Test</button>
+                <div id="response-displacement" class="response-panel" style="display:none;"></div>
+            </div>
+
+            <!-- OSM Fetch -->
+            <div class="endpoint-card">
+                <div class="endpoint-header">
+                    <div>
+                        <span class="method-badge method-post">POST</span>
+                        <span style="margin-left: 8px; font-weight: 600;">Fetch OSM Data</span>
+                    </div>
+                </div>
+                <div class="endpoint-path">/api/osm/fetch</div>
+                <div class="param-group" style="margin-top: 16px;">
+                    <label>Bounding Box:</label>
+                    <input type="text" id="bbox-minlat" placeholder="minLat (50.9)" style="margin-bottom: 4px;">
+                    <input type="text" id="bbox-minlng" placeholder="minLng (6.9)" style="margin-bottom: 4px;">
+                    <input type="text" id="bbox-maxlat" placeholder="maxLat (50.91)" style="margin-bottom: 4px;">
+                    <input type="text" id="bbox-maxlng" placeholder="maxLng (6.91)">
+                </div>
+                <button class="btn-test" onclick="testOsmFetch()">🚀 Test</button>
+                <div id="response-osm" class="response-panel" style="display:none;"></div>
+            </div>
+
+            <!-- Route Calculation -->
+            <div class="endpoint-card">
+                <div class="endpoint-header">
+                    <div>
+                        <span class="method-badge method-post">POST</span>
+                        <span style="margin-left: 8px; font-weight: 600;">Calculate Route</span>
+                    </div>
+                </div>
+                <div class="endpoint-path">/api/route/calculate</div>
+                <div class="param-group" style="margin-top: 16px;">
+                    <label>Point A (lat, lng):</label>
+                    <input type="text" id="route-a-lat" placeholder="50.9" style="margin-bottom: 4px;">
+                    <input type="text" id="route-a-lng" placeholder="6.9" style="margin-bottom: 12px;">
+                    <label>Point B (lat, lng):</label>
+                    <input type="text" id="route-b-lat" placeholder="50.91" style="margin-bottom: 4px;">
+                    <input type="text" id="route-b-lng" placeholder="6.91">
+                </div>
+                <button class="btn-test" onclick="testRoute()">🚀 Test</button>
+                <div id="response-route" class="response-panel" style="display:none;"></div>
+            </div>
+        </div>
+
+        <div class="logs-section">
+            <div class="logs-header">
+                <h3>📋 Request Logs</h3>
+                <button class="btn-clear" onclick="clearLogs()">Clear Logs</button>
+            </div>
+            <div class="logs-container" id="logs-container">
+                <div class="log-entry log-info">
+                    <span class="log-timestamp">[READY]</span>
+                    Dashboard initialized. Ready to test APIs.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const JAVA_URL = 'http://localhost:8085';
+        const PYTHON_URL = 'http://localhost:8002';
+
+        // Check server status
+        async function checkAllServers() {
+            addLog('info', 'Checking server status...');
+            await checkServer(JAVA_URL, 'status-java');
+            await checkServer(PYTHON_URL, 'status-python');
+        }
+
+        async function checkServer(url, dotId) {
+            try {
+                const response = await fetch(`${url}/api/health`, {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const dot = document.getElementById(dotId);
+                if (response.ok) {
+                    dot.classList.remove('offline');
+                    dot.classList.add('online');
+                    addLog('success', `${url} is ONLINE`);
+                } else {
+                    throw new Error('Server returned error');
+                }
+            } catch (error) {
+                const dot = document.getElementById(dotId);
+                dot.classList.remove('online');
+                dot.classList.add('offline');
+                addLog('error', `${url} is OFFLINE`);
+            }
+        }
+
+        // Test endpoints
+        async function testHealth() {
+            const server = document.getElementById('health-server').value;
+            await makeRequest('GET', `${server}/api/health`, null, 'response-health');
+        }
+
+        async function testWktProcess() {
+            const wktContent = document.getElementById('wkt-content').value;
+            if (!wktContent.trim()) {
+                alert('Please enter WKT content');
+                return;
+            }
+            await makeRequest('POST', `${JAVA_URL}/api/wkt/process`, { wktContent }, 'response-wkt');
+        }
+
+        async function testFeatureDetails() {
+            const id = document.getElementById('feature-id').value;
+            if (!id.trim()) {
+                alert('Please enter feature ID');
+                return;
+            }
+            await makeRequest('GET', `${JAVA_URL}/api/features/${id}`, null, 'response-feature');
+        }
+
+        async function testDisplacement() {
+            const json = document.getElementById('displacement-json').value;
+            if (!json.trim()) {
+                alert('Please enter features JSON');
+                return;
+            }
+            try {
+                const data = JSON.parse(json);
+                await makeRequest('POST', `${JAVA_URL}/api/displacement`, data, 'response-displacement');
+            } catch (e) {
+                alert('Invalid JSON: ' + e.message);
+            }
+        }
+
+        async function testOsmFetch() {
+            const minLat = parseFloat(document.getElementById('bbox-minlat').value);
+            const minLng = parseFloat(document.getElementById('bbox-minlng').value);
+            const maxLat = parseFloat(document.getElementById('bbox-maxlat').value);
+            const maxLng = parseFloat(document.getElementById('bbox-maxlng').value);
+            
+            if (isNaN(minLat) || isNaN(minLng) || isNaN(maxLat) || isNaN(maxLng)) {
+                alert('Please enter all bounding box coordinates');
+                return;
+            }
+            
+            await makeRequest('POST', `${JAVA_URL}/api/osm/fetch`, 
+                { minLat, minLng, maxLat, maxLng }, 'response-osm');
+        }
+
+        async function testRoute() {
+            const aLat = parseFloat(document.getElementById('route-a-lat').value);
+            const aLng = parseFloat(document.getElementById('route-a-lng').value);
+            const bLat = parseFloat(document.getElementById('route-b-lat').value);
+            const bLng = parseFloat(document.getElementById('route-b-lng').value);
+            
+            if (isNaN(aLat) || isNaN(aLng) || isNaN(bLat) || isNaN(bLng)) {
+                alert('Please enter all coordinates');
+                return;
+            }
+            
+            await makeRequest('POST', `${JAVA_URL}/api/route/calculate`,
+                { pointA: { lat: aLat, lng: aLng }, pointB: { lat: bLat, lng: bLng } },
+                'response-route');
+        }
+
+        // Generic request handler
+        async function makeRequest(method, url, body, responseId) {
+            const startTime = Date.now();
+            const responseDiv = document.getElementById(responseId);
+            
+            try {
+                addLog('info', `${method} ${url}`);
+                
+                const options = {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' }
+                };
+                
+                if (body) {
+                    options.body = JSON.stringify(body);
+                }
+                
+                const response = await fetch(url, options);
+                const duration = Date.now() - startTime;
+                const data = await response.json();
+                
+                // Display response
+                responseDiv.style.display = 'block';
+                responseDiv.innerHTML = `
+                    <div class="response-header">
+                        <span class="status-code status-${response.status}">${response.status} ${response.statusText}</span>
+                        <span class="response-time">${duration}ms</span>
+                    </div>
+                    <div class="response-body">${JSON.stringify(data, null, 2)}</div>
+                `;
+                
+                if (response.ok) {
+                    addLog('success', `${method} ${url} → ${response.status} (${duration}ms)`);
+                } else {
+                    addLog('error', `${method} ${url} → ${response.status} ${data.error || ''}`);
+                }
+                
+            } catch (error) {
+                const duration = Date.now() - startTime;
+                addLog('error', `${method} ${url} → FAILED: ${error.message}`);
+                
+                responseDiv.style.display = 'block';
+                responseDiv.innerHTML = `
+                    <div class="response-header">
+                        <span class="status-code status-500">ERROR</span>
+                        <span class="response-time">${duration}ms</span>
+                    </div>
+                    <div class="response-body" style="color: var(--danger);">${error.message}</div>
+                `;
+            }
+        }
+
+        // Logging
+        function addLog(type, message) {
+            const logsContainer = document.getElementById('logs-container');
+            const timestamp = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.innerHTML = `<span class="log-timestamp">[${timestamp}]</span>${message}`;
+            logsContainer.appendChild(entry);
+            logsContainer.scrollTop = logsContainer.scrollHeight;
+        }
+
+        function clearLogs() {
+            const logsContainer = document.getElementById('logs-container');
+            logsContainer.innerHTML = '<div class="log-entry log-info"><span class="log-timestamp">[CLEARED]</span>Logs cleared.</div>';
+        }
+
+        // Auto-check servers on load
+        setTimeout(checkAllServers, 500);
+    </script>
+</body>
+</html>

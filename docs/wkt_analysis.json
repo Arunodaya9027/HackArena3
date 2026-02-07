@@ -1,0 +1,26 @@
+{
+  "file": "..\\..\\docs\\Problem 3 - streets_ugen.wkt",
+  "total_features": 36,
+  "total_coordinate_points": 113,
+  "bounding_box": {
+    "min_x": 7065.42,
+    "max_x": 7247.55,
+    "min_y": 8580.88,
+    "max_y": 8697.22,
+    "width": 182.13,
+    "height": 116.34
+  },
+  "network_statistics": {
+    "total_network_length": 212.97,
+    "average_feature_length": 5.92,
+    "min_segments_per_feature": 2,
+    "max_segments_per_feature": 5,
+    "avg_segments_per_feature": 3.14
+  },
+  "topology": {
+    "total_endpoints": 72,
+    "unique_endpoints": 46,
+    "potential_junctions": 26,
+    "connectivity_ratio": 0.36
+  }
+}

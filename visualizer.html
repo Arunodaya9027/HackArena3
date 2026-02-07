@@ -1,0 +1,1641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GeoClear AI - Geometry Processing Visualizer</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .status-bar {
+            display: flex;
+            justify-content: space-around;
+            padding: 20px;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e9ecef;
+        }
+        
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-indicator.online {
+            background: #28a745;
+        }
+        
+        .status-indicator.offline {
+            background: #dc3545;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 400px 1fr;
+            gap: 20px;
+            padding: 20px;
+            min-height: calc(100vh - 300px);
+        }
+        
+        .sidebar {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            overflow-y: auto;
+            max-height: calc(100vh - 320px);
+        }
+        
+        .api-section {
+            margin-bottom: 30px;
+        }
+        
+        .api-section h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+        
+        .api-endpoint {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+        
+        .api-endpoint:hover {
+            border-color: #667eea;
+            transform: translateX(5px);
+        }
+        
+        .api-endpoint.active {
+            border-color: #764ba2;
+            background: #f0f4ff;
+        }
+        
+        .method-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75em;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        
+        .method-get {
+            background: #28a745;
+            color: white;
+        }
+        
+        .method-post {
+            background: #007bff;
+            color: white;
+        }
+        
+        .workspace {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e9ecef;
+        }
+        
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 1em;
+            color: #6c757d;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+        }
+        
+        .tab:hover {
+            color: #667eea;
+        }
+        
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #495057;
+            font-weight: 600;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 6px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .form-group textarea {
+            font-family: 'Courier New', monospace;
+            min-height: 150px;
+            resize: vertical;
+        }
+        
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 6px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        
+        .response-container {
+            margin-top: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        
+        .response-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .response-status {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+        
+        .response-status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .response-status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .response-body {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        #map {
+            height: 600px;
+            border-radius: 8px;
+            margin-top: 20px;
+            position: relative;
+        }
+        
+        .map-legend {
+            position: absolute;
+            bottom: 30px;
+            right: 10px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            z-index: 1000;
+            max-width: 280px;
+            font-size: 0.9em;
+        }
+        
+        .map-legend h4 {
+            margin: 0 0 10px 0;
+            color: #667eea;
+            font-size: 1em;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 5px;
+        }
+        
+        .legend-section {
+            margin: 10px 0;
+        }
+        
+        .legend-section h5 {
+            margin: 8px 0 5px 0;
+            font-size: 0.85em;
+            color: #495057;
+            font-weight: 600;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 5px 0;
+            font-size: 0.85em;
+        }
+        
+        .legend-line {
+            width: 30px;
+            height: 3px;
+            border-radius: 2px;
+        }
+        
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 2px solid #333;
+        }
+        
+        .legend-toggle {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 1000;
+            font-size: 0.9em;
+            transition: all 0.3s;
+        }
+        
+        .legend-toggle:hover {
+            background: #f0f4ff;
+            transform: scale(1.05);
+        }
+        
+        .coords-display {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(255,255,255,0.95);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 1000;
+        }
+        
+        .map-controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            z-index: 1000;
+        }
+        
+        .map-control-btn {
+            display: block;
+            width: 100%;
+            padding: 8px 12px;
+            margin: 5px 0;
+            border: none;
+            background: #667eea;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+            transition: all 0.3s;
+        }
+        
+        .map-control-btn:hover {
+            background: #764ba2;
+            transform: translateX(3px);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .stat-card h4 {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-bottom: 10px;
+        }
+        
+        .stat-card .value {
+            font-size: 2em;
+            font-weight: bold;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .sample-data {
+            background: #e7f3ff;
+            border-left: 4px solid #007bff;
+            padding: 15px;
+            margin-top: 15px;
+            border-radius: 4px;
+        }
+        
+        .sample-data h4 {
+            color: #007bff;
+            margin-bottom: 10px;
+        }
+        
+        .sample-button {
+            margin-top: 10px;
+            padding: 8px 16px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+        
+        .sample-button:hover {
+            background: #0056b3;
+        }
+        
+        /* View Toggle Buttons */
+        .view-toggle {
+            position: absolute;
+            top: 10px;
+            right: 120px;
+            z-index: 1001;
+            background: white;
+            padding: 5px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            display: flex;
+            gap: 5px;
+        }
+        
+        .toggle-btn {
+            padding: 8px 12px;
+            border: 2px solid #e9ecef;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        
+        .toggle-btn:hover {
+            background: #f8f9fa;
+            border-color: #667eea;
+        }
+        
+        .toggle-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        
+        /* Tools Menu */
+        .tools-menu {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 1002;
+        }
+        
+        .tools-btn {
+            padding: 10px 20px;
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        
+        .tools-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+        
+        .tools-dropdown {
+            position: absolute;
+            top: 50px;
+            right: 0;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            min-width: 250px;
+            display: none;
+            z-index: 1003;
+        }
+        
+        .tools-dropdown.show {
+            display: block;
+        }
+        
+        .tool-item {
+            padding: 12px 20px;
+            border-bottom: 1px solid #e9ecef;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .tool-item:last-child {
+            border-bottom: none;
+        }
+        
+        .tool-item:hover {
+            background: #f8f9fa;
+        }
+        
+        .tool-item strong {
+            display: block;
+            color: #333;
+            margin-bottom: 4px;
+        }
+        
+        .tool-item span {
+            font-size: 0.85em;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="tools-menu">
+            <button class="tools-btn" onclick="toggleToolsMenu()">🔧 Tools & Analysis</button>
+            <div class="tools-dropdown" id="toolsDropdown">
+                <div class="tool-item" onclick="openTool('analysis')">
+                    <strong>🔍 Feature Analysis</strong>
+                    <span>Debug priority & displacement</span>
+                </div>
+                <div class="tool-item" onclick="openTool('googlemaps')">
+                    <strong>🗺️ Google Maps View</strong>
+                    <span>See features on real city maps</span>
+                </div>
+                <div class="tool-item" onclick="openTool('docs')">
+                    <strong>📚 Documentation</strong>
+                    <span>View enhancement guides</span>
+                </div>
+            </div>
+        </div>
+        
+    <div class="container">
+        <header>
+            <h1>🌍 GeoClear AI</h1>
+            <p>Geometry Processing & Conflict Resolution Visualizer</p>
+        </header>
+        
+        <div class="status-bar">
+            <div class="status-item">
+                <div class="status-indicator" id="pythonStatus"></div>
+                <span><strong>Python Engine:</strong> <span id="pythonStatusText">Checking...</span></span>
+            </div>
+            <div class="status-item">
+                <div class="status-indicator" id="javaStatus"></div>
+                <span><strong>Java API:</strong> <span id="javaStatusText">Checking...</span></span>
+            </div>
+            <div class="status-item">
+                <span><strong>Port:</strong> Python:8002 | Java:8085</span>
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <aside class="sidebar">
+                <div class="api-section">
+                    <h3>🐍 Python Engine</h3>
+                    <div class="api-endpoint" data-endpoint="python-health">
+                        <span class="method-badge method-get">GET</span>
+                        <strong>Health Check</strong>
+                    </div>
+                    <div class="api-endpoint" data-endpoint="python-capabilities">
+                        <span class="method-badge method-get">GET</span>
+                        <strong>Get Capabilities</strong>
+                    </div>
+                    <div class="api-endpoint" data-endpoint="python-process">
+                        <span class="method-badge method-post">POST</span>
+                        <strong>Process Geometry</strong>
+                    </div>
+                </div>
+                
+                <div class="api-section">
+                    <h3>☕ Java API</h3>
+                    <div class="api-endpoint" data-endpoint="java-health">
+                        <span class="method-badge method-get">GET</span>
+                        <strong>Health Check</strong>
+                    </div>
+                    <div class="api-endpoint" data-endpoint="java-process-manual">
+                        <span class="method-badge method-post">POST</span>
+                        <strong>Process Features (Manual)</strong>
+                    </div>
+                    <div class="api-endpoint" data-endpoint="java-process-file">
+                        <span class="method-badge method-post">POST</span>
+                        <strong>Process WKT File (Auto)</strong>
+                    </div>
+                </div>
+            </aside>
+            
+            <main class="workspace">
+                <div class="tabs">
+                    <button class="tab active" data-tab="request">📤 Request</button>
+                    <button class="tab" data-tab="response">📥 Response</button>
+                    <button class="tab" data-tab="visualize">🗺️ Visualize</button>
+                </div>
+                
+                <div class="tab-content active" id="request">
+                    <div id="endpointDetails"></div>
+                </div>
+                
+                <div class="tab-content" id="response">
+                    <div class="response-container">
+                        <div class="response-header">
+                            <h3>Response</h3>
+                            <div id="responseStatus"></div>
+                        </div>
+                        <div class="response-body" id="responseBody">No response yet. Select an endpoint and send a request.</div>
+                    </div>
+                </div>
+                
+                <div class="tab-content" id="visualize">
+                    <h3>Geometry Visualization</h3>
+                    <div class="stats-grid" id="statsGrid"></div>
+                    
+                    <div style="position: relative;">
+                        <div id="map"></div>
+                        
+                        <!-- Map Legend -->
+                        <div class="map-legend" id="mapLegend">
+                            <h4>📍 Map Legend</h4>
+                            
+                            <div class="legend-section">
+                                <h5>View Modes</h5>
+                                <div class="legend-item">
+                                    <div class="legend-line" style="background: #999; border: 2px dashed #666;"></div>
+                                    <span>Before (Original)</span>
+                                </div>
+                                <div class="legend-item">
+                                    <div class="legend-line" style="background: #28a745;"></div>
+                                    <span>After - Preserved</span>
+                                </div>
+                                <div class="legend-item">
+                                    <div class="legend-line" style="background: #dc3545;"></div>
+                                    <span>After - Displaced</span>
+                                </div>
+                            </div>
+                            
+                            <div class="legend-section">
+                                <h5>Priority Rendering (Z-Order)</h5>
+                                <div class="legend-item">
+                                    <span style="color: #8B0000; font-weight: bold;">P1</span>
+                                    <span>Railway/Highway (Top Layer, Never Moves)</span>
+                                </div>
+                                <div class="legend-item">
+                                    <span style="color: #FF4500; font-weight: bold;">P2</span>
+                                    <span>Road (Minimal Movement)</span>
+                                </div>
+                                <div class="legend-item">
+                                    <span style="color: #FFA500; font-weight: bold;">P3</span>
+                                    <span>Street (Moderate Movement)</span>
+                                </div>
+                                <div class="legend-item">
+                                    <span style="color: #4169E1; font-weight: bold;">P4</span>
+                                    <span>Icon (More Movement)</span>
+                                </div>
+                                <div class="legend-item">
+                                    <span style="color: #9370DB; font-weight: bold;">P5</span>
+                                    <span>Label (Bottom Layer, Most Movement)</span>
+                                </div>
+                            </div>
+                            
+                            <div class="legend-section">
+                                <h5>Feature Types</h5>
+                                <div class="legend-item">
+                                    <span>🚂 Railway</span>
+                                </div>
+                                <div class="legend-item">
+                                    <span>🛣️ Highway</span>
+                                </div>
+                                <div class="legend-item">
+                                    <span>🚗 Road</span>
+                                </div>
+                                <div class="legend-item">
+                                    <span>🏘️ Street</span>
+                                </div>
+                                <div class="legend-item">
+                                    <span>📍 Icon</span>
+                                </div>
+                                <div class="legend-item">
+                                    <span>🏷️ Label</span>
+                                </div>
+                                <div class="legend-item">
+                                    <span>🌳 Park</span>
+                                </div>
+                            </div>
+                            
+                            <div class="legend-section" style="border-top: 1px solid #e9ecef; padding-top: 8px; margin-top: 8px;">
+                                <div style="font-size: 0.8em; color: #6c757d;">
+                                    💡 <strong>Tip:</strong> Click any line for details
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Toggle Legend Button -->
+                        <button class="legend-toggle" onclick="toggleLegend()">
+                            📖 Legend
+                        </button>
+                        
+                        <!-- Coordinate Display -->
+                        <div class="coords-display" id="coordsDisplay">
+                            Hover over map to see coordinates
+                        </div>
+                        
+                        <!-- Map Controls -->
+                        <div class="map-controls">
+                            <button class="map-control-btn" onclick="fitAllFeatures()">
+                                🎯 Fit All
+                            </button>
+                            <button class="map-control-btn" onclick="showDisplacedOnly()">
+                                🔴 Show Displaced
+                            </button>
+                            <button class="map-control-btn" onclick="showPreservedOnly()">
+                                🟢 Show Preserved
+                            </button>
+                            <button class="map-control-btn" onclick="showAllFeatures()">
+                                👁️ Show All
+                            </button>
+                            <button class="map-control-btn" onclick="clearMap()">
+                                🗑️ Clear Map
+                            </button>
+                        </div>
+                        
+                        <!-- View Toggle (Before/After/Both) -->
+                        <div class="view-toggle">
+                            <button class="toggle-btn active" id="btnAfter" onclick="showAfterView()">
+                                ✅ After (Corrected)
+                            </button>
+                            <button class="toggle-btn" id="btnBefore" onclick="showBeforeView()">
+                                ⚠️ Before (Original)
+                            </button>
+                            <button class="toggle-btn" id="btnBoth" onclick="showBothViews()">
+                                🔄 Compare Both
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+    
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        const API_CONFIG = {
+            python: 'http://localhost:8002',
+            java: 'http://localhost:8085'
+        };
+        
+        let map = null;
+        let currentResponse = null;
+        let allLayers = [];
+        let displacedLayers = [];
+        let preservedLayers = [];
+        let beforeLayers = [];
+        let afterLayers = [];
+        let currentView = 'after'; // 'before', 'after', or 'both'
+        
+        // Coordinate transformation constants
+        const COORD_OFFSET_X = 7100;
+        const COORD_OFFSET_Y = 8600;
+        const COORD_SCALE = 10000;
+        
+        // Feature type icons
+        const FEATURE_ICONS = {
+            'railway': '🚂',
+            'highway': '🛣️',
+            'road': '🚗',
+            'street': '🏘️',
+            'icon': '📍',
+            'label': '🏷️',
+            'park': '🌳'
+        };
+        
+        // Priority colors
+        const PRIORITY_COLORS = {
+            'P1_RAILWAY/HIGHWAY': '#8B0000',
+            'P1_HIGHWAY': '#8B0000',
+            'P2_ROAD': '#FF4500',
+            'P3_STREET': '#FFA500',
+            'P4_ICON': '#4169E1',
+            'P5_LABEL': '#9370DB'
+        };
+        
+        // Priority z-index mapping (higher priority = higher z-index = rendered on top)
+        const PRIORITY_Z_INDEX = {
+            'P1_RAILWAY/HIGHWAY': 1000,
+            'P1_HIGHWAY': 1000,
+            'P2_ROAD': 900,
+            'P3_STREET': 800,
+            'P4_ICON': 700,
+            'P5_LABEL': 600
+        };
+        
+        const endpoints = {
+            'python-health': {
+                name: 'Python Health Check',
+                method: 'GET',
+                url: `${API_CONFIG.python}/api/geometry/health`,
+                description: 'Check if Python geometry engine is running',
+                body: null
+            },
+            'python-capabilities': {
+                name: 'Python Capabilities',
+                method: 'GET',
+                url: `${API_CONFIG.python}/api/geometry/capabilities`,
+                description: 'Get list of supported geometry operations',
+                body: null
+            },
+            'python-process': {
+                name: 'Process Geometry (Python)',
+                method: 'POST',
+                url: `${API_CONFIG.python}/api/geometry/process`,
+                description: 'Process geometry features with conflict resolution',
+                body: {
+                    features: [
+                        {
+                            id: "highway_001",
+                            wkt: "LINESTRING(0 0,10 0)",
+                            priority: "P1_HIGHWAY"
+                        },
+                        {
+                            id: "street_001",
+                            wkt: "LINESTRING(0 1,10 1)",
+                            priority: "P3_STREET"
+                        }
+                    ],
+                    min_clearance: 2.0,
+                    force_strength: 1.0,
+                    max_iterations: 100,
+                    enable_3d_depth: false
+                }
+            },
+            'java-health': {
+                name: 'Java Health Check',
+                method: 'GET',
+                url: `${API_CONFIG.java}/api/health`,
+                description: 'Check Java API and Python engine connectivity',
+                body: null
+            },
+            'java-process-manual': {
+                name: 'Process Features (Java)',
+                method: 'POST',
+                url: `${API_CONFIG.java}/api/geoclear/process`,
+                description: 'Process features with manual input',
+                body: {
+                    features: [
+                        {
+                            id: "railway_001",
+                            wkt: "LINESTRING(0 0,10 0)",
+                            priority: "P1_RAILWAY/HIGHWAY"
+                        },
+                        {
+                            id: "label_001",
+                            wkt: "LINESTRING(0 0.5,10 0.5)",
+                            priority: "P5_LABEL"
+                        }
+                    ],
+                    minClearance: 2.0
+                }
+            },
+            'java-process-file': {
+                name: 'Process WKT File (Java)',
+                method: 'POST',
+                url: `${API_CONFIG.java}/api/geoclear/process-file-auto`,
+                description: 'Process WKT file with automatic priority detection',
+                urlParams: {
+                    filePath: 'C:/__F__/Projects/A4/docs/Problem 3 - streets_ugen.wkt',
+                    minClearance: 2.0
+                }
+            }
+        };
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            checkServiceStatus();
+            setupEventListeners();
+            selectEndpoint('python-health');
+            
+            setInterval(checkServiceStatus, 30000); // Check every 30s
+        });
+        
+        function checkServiceStatus() {
+            // Check Python
+            fetch(`${API_CONFIG.python}/api/geometry/health`)
+                .then(res => res.json())
+                .then(() => {
+                    updateStatus('python', true);
+                })
+                .catch(() => {
+                    updateStatus('python', false);
+                });
+            
+            // Check Java
+            fetch(`${API_CONFIG.java}/api/health`)
+                .then(res => res.json())
+                .then(() => {
+                    updateStatus('java', true);
+                })
+                .catch(() => {
+                    updateStatus('java', false);
+                });
+        }
+        
+        function updateStatus(service, online) {
+            const indicator = document.getElementById(`${service}Status`);
+            const text = document.getElementById(`${service}StatusText`);
+            
+            if (online) {
+                indicator.className = 'status-indicator online';
+                text.textContent = 'Online';
+                text.style.color = '#28a745';
+            } else {
+                indicator.className = 'status-indicator offline';
+                text.textContent = 'Offline';
+                text.style.color = '#dc3545';
+            }
+        }
+        
+        function setupEventListeners() {
+            // Endpoint selection
+            document.querySelectorAll('.api-endpoint').forEach(elem => {
+                elem.addEventListener('click', () => {
+                    document.querySelectorAll('.api-endpoint').forEach(e => e.classList.remove('active'));
+                    elem.classList.add('active');
+                    selectEndpoint(elem.dataset.endpoint);
+                });
+            });
+            
+            // Tab switching
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const tabName = tab.dataset.tab;
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+                    tab.classList.add('active');
+                    document.getElementById(tabName).classList.add('active');
+                    
+                    if (tabName === 'visualize' && currentResponse) {
+                        visualizeResponse();
+                    }
+                });
+            });
+        }
+        
+        function selectEndpoint(endpointId) {
+            const endpoint = endpoints[endpointId];
+            const container = document.getElementById('endpointDetails');
+            
+            let html = `
+                <h2>${endpoint.name}</h2>
+                <p style="color: #6c757d; margin: 10px 0 20px 0;">${endpoint.description}</p>
+                
+                <div class="form-group">
+                    <label>Method & URL</label>
+                    <input type="text" readonly value="${endpoint.method} ${endpoint.url}">
+                </div>
+            `;
+            
+            if (endpoint.urlParams) {
+                html += `<div class="form-group">
+                    <label>URL Parameters</label>`;
+                for (const [key, value] of Object.entries(endpoint.urlParams)) {
+                    html += `<input type="text" id="param_${key}" placeholder="${key}" value="${value}" style="margin-bottom: 10px;">`;
+                }
+                html += `</div>`;
+            }
+            
+            if (endpoint.body) {
+                html += `
+                    <div class="form-group">
+                        <label>Request Body (JSON)</label>
+                        <textarea id="requestBody">${JSON.stringify(endpoint.body, null, 2)}</textarea>
+                    </div>
+                    
+                    <div class="sample-data">
+                        <h4>📋 Sample Data</h4>
+                        <p>Try processing the actual WKT file with 52 features</p>
+                        <button class="sample-button" onclick="loadSampleData()">Load Full Dataset</button>
+                    </div>
+                `;
+            }
+            
+            html += `
+                <button class="btn btn-primary" onclick="sendRequest('${endpointId}')">
+                    <span>🚀 Send Request</span>
+                    <div class="loading" style="display: none;"></div>
+                </button>
+            `;
+            
+            container.innerHTML = html;
+        }
+        
+        function loadSampleData() {
+            const textarea = document.getElementById('requestBody');
+            if (textarea) {
+                textarea.value = JSON.stringify({
+                    filePath: "C:/__F__/Projects/A4/docs/Problem 3 - streets_ugen.wkt",
+                    minClearance: 2.0
+                }, null, 2);
+            }
+        }
+        
+        async function sendRequest(endpointId) {
+            const endpoint = endpoints[endpointId];
+            const btn = event.target.closest('.btn');
+            const loading = btn.querySelector('.loading');
+            const btnText = btn.querySelector('span');
+            
+            // Show loading
+            loading.style.display = 'inline-block';
+            btnText.textContent = 'Sending...';
+            btn.disabled = true;
+            
+            try {
+                let url = endpoint.url;
+                const options = {
+                    method: endpoint.method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                };
+                
+                // Handle URL params
+                if (endpoint.urlParams) {
+                    const params = new URLSearchParams();
+                    for (const key of Object.keys(endpoint.urlParams)) {
+                        const input = document.getElementById(`param_${key}`);
+                        if (input) {
+                            params.append(key, input.value);
+                        }
+                    }
+                    url += '?' + params.toString();
+                }
+                
+                // Handle request body
+                if (endpoint.body) {
+                    const bodyText = document.getElementById('requestBody').value;
+                    options.body = bodyText;
+                }
+                
+                const response = await fetch(url, options);
+                const data = await response.json();
+                
+                currentResponse = data;
+                
+                // Store in localStorage for analysis tools
+                localStorage.setItem('currentResponse', JSON.stringify(data));
+                
+                // Update response tab
+                const statusElem = document.getElementById('responseStatus');
+                statusElem.innerHTML = `<span class="response-status ${response.ok ? 'success' : 'error'}">${response.status} ${response.statusText}</span>`;
+                
+                const bodyElem = document.getElementById('responseBody');
+                bodyElem.textContent = JSON.stringify(data, null, 2);
+                
+                // Switch to response tab
+                document.querySelector('.tab[data-tab="response"]').click();
+                
+                // Show success message
+                btnText.textContent = '✅ Success!';
+                setTimeout(() => {
+                    btnText.textContent = '🚀 Send Request';
+                }, 2000);
+                
+            } catch (error) {
+                const statusElem = document.getElementById('responseStatus');
+                statusElem.innerHTML = `<span class="response-status error">Error</span>`;
+                
+                const bodyElem = document.getElementById('responseBody');
+                bodyElem.textContent = `Error: ${error.message}`;
+                
+                btnText.textContent = '❌ Failed';
+                setTimeout(() => {
+                    btnText.textContent = '🚀 Send Request';
+                }, 2000);
+            } finally {
+                loading.style.display = 'none';
+                btn.disabled = false;
+            }
+        }
+        
+        function visualizeResponse() {
+            if (!currentResponse || !currentResponse.results) {
+                document.getElementById('statsGrid').innerHTML = '<p>No data to visualize. Send a request first.</p>';
+                return;
+            }
+            
+            // Show statistics with displacement details
+            const displacedCount = currentResponse.results.filter(r => r.was_displaced).length;
+            const preservedCount = currentResponse.results.filter(r => !r.was_displaced).length;
+            
+            // Calculate average displacement by priority
+            const displacementByPriority = {};
+            currentResponse.results.forEach(result => {
+                if (result.was_displaced) {
+                    const priority = getPriority(result.feature_id);
+                    if (!displacementByPriority[priority]) {
+                        displacementByPriority[priority] = [];
+                    }
+                    const originalCoords = parseWKT(result.original_wkt);
+                    const correctedCoords = parseWKT(result.corrected_wkt);
+                    const displacement = calculateDisplacement(originalCoords, correctedCoords);
+                    if (displacement) {
+                        displacementByPriority[priority].push(displacement.distance);
+                    }
+                }
+            });
+            
+            const stats = {
+                'Total Features': currentResponse.results.length,
+                'Displaced': `${displacedCount} (${(displacedCount/currentResponse.results.length*100).toFixed(1)}%)`,
+                'Preserved': `${preservedCount} (${(preservedCount/currentResponse.results.length*100).toFixed(1)}%)`,
+                'Conflicts': currentResponse.total_conflicts_resolved || 0,
+                'Execution Time': `${(currentResponse.execution_time_ms || 0).toFixed(2)}ms`
+            };
+            
+            let statsHtml = '';
+            for (const [key, value] of Object.entries(stats)) {
+                statsHtml += `
+                    <div class="stat-card">
+                        <h4>${key}</h4>
+                        <div class="value">${value}</div>
+                    </div>
+                `;
+            }
+            
+            // Add displacement by priority stats
+            if (Object.keys(displacementByPriority).length > 0) {
+                statsHtml += '<div class="stat-card" style="grid-column: 1/-1;"><h4>Average Displacement by Priority</h4>';
+                for (const [priority, distances] of Object.entries(displacementByPriority)) {
+                    const avg = distances.reduce((a, b) => a + b, 0) / distances.length;
+                    const color = PRIORITY_COLORS[priority] || '#666';
+                    statsHtml += `<div style="color: ${color}; font-weight: bold;">${priority}: ${avg.toFixed(2)} units</div>`;
+                }
+                statsHtml += '</div>';
+            }
+            
+            document.getElementById('statsGrid').innerHTML = statsHtml;
+            
+            // Initialize map if needed
+            if (!map) {
+                map = L.map('map', { zoomControl: true }).setView([0, 0], 13);
+                
+                // Add OpenStreetMap tiles
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors',
+                    maxZoom: 19
+                }).addTo(map);
+                
+                // Add coordinate display on mouse move
+                map.on('mousemove', function(e) {
+                    const coords = document.getElementById('coordsDisplay');
+                    const originalX = (e.latlng.lng * COORD_SCALE + COORD_OFFSET_X).toFixed(2);
+                    const originalY = (e.latlng.lat * COORD_SCALE + COORD_OFFSET_Y).toFixed(2);
+                    coords.innerHTML = `
+                        <strong>Map:</strong> ${e.latlng.lat.toFixed(6)}, ${e.latlng.lng.toFixed(6)}<br>
+                        <strong>Original:</strong> ${originalX}, ${originalY}
+                    `;
+                });
+            }
+            
+            // Clear previous layers
+            allLayers.forEach(layer => map.removeLayer(layer));
+            beforeLayers.forEach(layer => map.removeLayer(layer));
+            afterLayers.forEach(layer => map.removeLayer(layer));
+            allLayers = [];
+            beforeLayers = [];
+            afterLayers = [];
+            displacedLayers = [];
+            preservedLayers = [];
+            
+            // Parse and display geometries - SORT BY PRIORITY FIRST (low to high for proper z-order)
+            const bounds = [];
+            const sortedResults = [...currentResponse.results].sort((a, b) => {
+                const priorityA = getPriority(a.feature_id);
+                const priorityB = getPriority(b.feature_id);
+                const zIndexA = PRIORITY_Z_INDEX[priorityA] || 500;
+                const zIndexB = PRIORITY_Z_INDEX[priorityB] || 500;
+                return zIndexA - zIndexB; // Lower priority rendered first, higher priority on top
+            });
+            
+            sortedResults.forEach(result => {
+                try {
+                    const featureType = getFeatureType(result.feature_id);
+                    const priority = getPriority(result.feature_id);
+                    const icon = FEATURE_ICONS[featureType] || '📍';
+                    const zIndex = PRIORITY_Z_INDEX[priority] || 500;
+                    const wasDisplaced = result.was_displaced;
+                    
+                    // BEFORE layer (original position) - dashed dark gray
+                    const beforeCoords = parseWKT(result.original_wkt);
+                    if (beforeCoords.length > 0) {
+                        const beforeLine = L.polyline(beforeCoords, {
+                            color: '#1a1a1a',
+                            weight: 3,
+                            opacity: 0.6,
+                            dashArray: '8, 6',
+                            className: 'before-feature',
+                            pane: 'overlayPane',
+                            zIndexOffset: zIndex - 100,
+                            lineCap: 'round',
+                            lineJoin: 'round'
+                        });
+                        
+                        beforeLine.bindPopup(`
+                            <div style="min-width: 250px;">
+                                <h4 style="margin: 0 0 10px 0; color: #1a1a1a; border-bottom: 2px solid #eee; padding-bottom: 8px;">
+                                    ${icon} ${result.feature_id} (BEFORE)
+                                </h4>
+                                <div style="background: #f8f9fa; padding: 10px; border-radius: 5px; margin-bottom: 10px;">
+                                    <strong>🔍 Why "BEFORE"?</strong><br>
+                                    <small style="color: #666;">This shows the feature's original position before any displacement corrections were applied.</small>
+                                </div>
+                                <table style="width: 100%; font-size: 0.9em;">
+                                    <tr>
+                                        <td><strong>Type:</strong></td>
+                                        <td>${featureType}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Priority:</strong></td>
+                                        <td style="color: ${PRIORITY_COLORS[priority] || '#333'}; font-weight: bold;">
+                                            ${priority || 'N/A'}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Points:</strong></td>
+                                        <td>${beforeCoords.length}</td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="2" style="padding-top: 8px; border-top: 1px solid #eee;">
+                                            <small style="color: #666;">
+                                                <strong>Visual:</strong> Dashed dark line (original state)
+                                            </small>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        `);
+                        
+                        beforeLayers.push(beforeLine);
+                        beforeCoords.forEach(coord => bounds.push(coord));
+                    }
+                    
+                    // AFTER layer (corrected position) - solid dark lines with color coding
+                    const afterCoords = parseWKT(result.corrected_wkt || result.original_wkt);
+                    if (afterCoords.length > 0) {
+                        // Use priority color for high-priority features, status color for others
+                        const isPriority1or2 = priority === 'P1_RAILWAY/HIGHWAY' || priority === 'P1_HIGHWAY' || priority === 'P2_ROAD';
+                        const color = isPriority1or2 ? PRIORITY_COLORS[priority] : (wasDisplaced ? '#dc3545' : '#28a745');
+                        const weight = isPriority1or2 ? 6 : (wasDisplaced ? 5 : 4);
+                        
+                        const afterLine = L.polyline(afterCoords, {
+                            color: color,
+                            weight: weight,
+                            opacity: 1.0,
+                            className: wasDisplaced ? 'displaced-feature' : 'preserved-feature',
+                            pane: 'overlayPane',
+                            zIndexOffset: zIndex,
+                            lineCap: 'round',
+                            lineJoin: 'round'
+                        });
+                        
+                        // Enhanced popup with detailed explanations
+                        const displacement = wasDisplaced ? calculateDisplacement(beforeCoords, afterCoords) : null;
+                        
+                        // Generate priority explanation
+                        const priorityExplanation = {
+                            'P1_RAILWAY/HIGHWAY': 'Highest priority - NEVER displaced. All other features must avoid railways.',
+                            'P1_HIGHWAY': 'Highest priority - NEVER displaced. All other features must avoid highways.',
+                            'P2_ROAD': 'High priority - Moves only for P1 features (railways/highways). Streets must avoid roads.',
+                            'P3_STREET': 'Medium priority - Moves for P1 and P2 features. Preserved if only conflicts with P4/P5.',
+                            'P4_ICON': 'Low priority - Moves for P1, P2, P3. Preserved if only conflicts with P5.',
+                            'P5_LABEL': 'Lowest priority - Moves for all higher priority features.'
+                        };
+                        
+                        const whyStatus = wasDisplaced ? 
+                            `This feature was <strong>displaced</strong> because it conflicted with higher-priority features (${priority === 'P3_STREET' ? 'P1 or P2' : priority === 'P4_ICON' ? 'P1, P2, or P3' : priority === 'P5_LABEL' ? 'P1, P2, P3, or P4' : 'P1'}).` :
+                            `This feature was <strong>preserved</strong> because it ${priority === 'P1_RAILWAY/HIGHWAY' || priority === 'P1_HIGHWAY' ? 'has the highest priority' : 'either had no conflicts or only conflicted with lower-priority features'}.`;
+                        
+                        afterLine.bindPopup(`
+                            <div style="min-width: 280px; max-width: 320px;">
+                                <h4 style="margin: 0 0 10px 0; color: ${color}; border-bottom: 2px solid ${color}; padding-bottom: 8px;">
+                                    ${icon} ${result.feature_id}
+                                </h4>
+                                
+                                <!-- Status Explanation -->
+                                <div style="background: ${wasDisplaced ? '#fff5f5' : '#f0fdf4'}; padding: 10px; border-radius: 5px; margin-bottom: 10px; border-left: 4px solid ${color};">
+                                    <strong>${wasDisplaced ? '🔴 DISPLACED' : '🟢 PRESERVED'}</strong><br>
+                                    <small style="color: #666;">${whyStatus}</small>
+                                </div>
+                                
+                                <table style="width: 100%; font-size: 0.9em; margin-bottom: 10px;">
+                                    <tr>
+                                        <td><strong>Type:</strong></td>
+                                        <td>${featureType}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Priority:</strong></td>
+                                        <td style="color: ${PRIORITY_COLORS[priority] || '#333'}; font-weight: bold;">
+                                            ${priority || 'N/A'}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Z-Index:</strong></td>
+                                        <td>${zIndex} <small style="color: #666;">(render order)</small></td>
+                                    </tr>
+                                    ${displacement ? `
+                                    <tr style="border-top: 1px solid #eee;">
+                                        <td colspan="2" style="padding-top: 8px;">
+                                            <strong>📏 Displacement:</strong> ${displacement.distance.toFixed(2)} units<br>
+                                            <strong>🧭 Direction:</strong> ${displacement.direction}°
+                                        </td>
+                                    </tr>
+                                    ` : ''}
+                                    <tr>
+                                        <td><strong>Points:</strong></td>
+                                        <td>${afterCoords.length}</td>
+                                    </tr>
+                                </table>
+                                
+                                <!-- Priority Rule Explanation -->
+                                <div style="background: #f8f9fa; padding: 10px; border-radius: 5px; margin-bottom: 10px;">
+                                    <strong>📋 Priority Rule:</strong><br>
+                                    <small style="color: #666;">${priorityExplanation[priority] || 'Standard priority rules apply.'}</small>
+                                </div>
+                                
+                                <!-- Line Style Explanation -->
+                                <div style="background: #f8f9fa; padding: 10px; border-radius: 5px; margin-bottom: 10px;">
+                                    <strong>🎨 Visual Style:</strong><br>
+                                    <small style="color: #666;">
+                                        <strong>Color:</strong> ${isPriority1or2 ? 'Priority color (P1/P2 always visible)' : wasDisplaced ? 'Red (moved from original)' : 'Green (stayed in place)'}<br>
+                                        <strong>Weight:</strong> ${weight}px (${isPriority1or2 ? 'thick for visibility' : wasDisplaced ? 'medium thickness' : 'normal thickness'})<br>
+                                        <strong>Z-Index:</strong> ${zIndex} (${zIndex >= 1000 ? 'renders on top' : zIndex >= 800 ? 'renders above low priority' : 'renders below high priority'})
+                                    </small>
+                                </div>
+                                
+                                <details style="margin-top: 10px; font-size: 0.85em;">
+                                    <summary style="cursor: pointer; color: #667eea; font-weight: bold;">🔍 View Technical Details</summary>
+                                    <div style="margin-top: 8px; padding: 8px; background: #fff; border: 1px solid #e2e8f0; border-radius: 4px;">
+                                        <strong>WKT Geometry:</strong>
+                                        <pre style="margin: 5px 0; padding: 5px; background: #f8f9fa; border-radius: 4px; overflow-x: auto; max-width: 280px; font-size: 0.75em;">${result.corrected_wkt || result.original_wkt}</pre>
+                                    </div>
+                                </details>
+                            </div>
+                        `);
+                        
+                        afterLayers.push(afterLine);
+                        allLayers.push(afterLine);
+                        
+                        if (wasDisplaced) {
+                            displacedLayers.push(afterLine);
+                        } else {
+                            preservedLayers.push(afterLine);
+                        }
+                        
+                        afterCoords.forEach(coord => bounds.push(coord));
+                    }
+                } catch (e) {
+                    console.error('Error parsing geometry:', e, result);
+                }
+            });
+            
+            // Show only AFTER view by default
+            afterLayers.forEach(layer => layer.addTo(map));
+            
+            if (bounds.length > 0) {
+                map.fitBounds(bounds, { padding: [50, 50] });
+            }
+        }
+        
+        function parseWKT(wkt) {
+            const match = wkt.match(/LINESTRING\s*\((.*?)\)/i);
+            if (!match) return [];
+            
+            const coords = match[1].split(',').map(point => {
+                const [x, y] = point.trim().split(/\s+/).map(Number);
+                // Transform coordinates: subtract offset and divide by scale
+                const lat = (y - COORD_OFFSET_Y) / COORD_SCALE;
+                const lng = (x - COORD_OFFSET_X) / COORD_SCALE;
+                return [lat, lng];
+            });
+            
+            return coords;
+        }
+        
+        function getFeatureType(featureId) {
+            const id = featureId.toLowerCase();
+            if (id.includes('railway')) return 'railway';
+            if (id.includes('highway')) return 'highway';
+            if (id.includes('road')) return 'road';
+            if (id.includes('street')) return 'street';
+            if (id.includes('icon')) return 'icon';
+            if (id.includes('label')) return 'label';
+            if (id.includes('park')) return 'park';
+            return 'unknown';
+        }
+        
+        function getPriority(featureId) {
+            const type = getFeatureType(featureId);
+            const priorityMap = {
+                'railway': 'P1_RAILWAY/HIGHWAY',
+                'highway': 'P1_HIGHWAY',
+                'road': 'P2_ROAD',
+                'street': 'P3_STREET',
+                'icon': 'P4_ICON',
+                'label': 'P5_LABEL',
+                'park': 'P3_STREET'
+            };
+            return priorityMap[type];
+        }
+        
+        function calculateDisplacement(original, displaced) {
+            if (!original.length || !displaced.length) return null;
+            
+            // Calculate average displacement
+            let totalDx = 0, totalDy = 0;
+            const minLen = Math.min(original.length, displaced.length);
+            
+            for (let i = 0; i < minLen; i++) {
+                totalDx += displaced[i][1] - original[i][1]; // lng
+                totalDy += displaced[i][0] - original[i][0]; // lat
+            }
+            
+            const avgDx = (totalDx / minLen) * COORD_SCALE;
+            const avgDy = (totalDy / minLen) * COORD_SCALE;
+            const distance = Math.sqrt(avgDx * avgDx + avgDy * avgDy);
+            const direction = Math.atan2(avgDy, avgDx) * 180 / Math.PI;
+            
+            return {
+                distance: distance,
+                direction: direction.toFixed(1)
+            };
+        }
+        
+        function toggleLegend() {
+            const legend = document.getElementById('mapLegend');
+            legend.style.display = legend.style.display === 'none' ? 'block' : 'none';
+        }
+        
+        function fitAllFeatures() {
+            if (allLayers.length === 0) return;
+            const group = L.featureGroup(allLayers);
+            map.fitBounds(group.getBounds(), { padding: [50, 50] });
+        }
+        
+        function showDisplacedOnly() {
+            preservedLayers.forEach(layer => map.removeLayer(layer));
+            displacedLayers.forEach(layer => {
+                if (!map.hasLayer(layer)) map.addLayer(layer);
+            });
+            if (displacedLayers.length > 0) {
+                const group = L.featureGroup(displacedLayers);
+                map.fitBounds(group.getBounds(), { padding: [50, 50] });
+            }
+        }
+        
+        function showPreservedOnly() {
+            displacedLayers.forEach(layer => map.removeLayer(layer));
+            preservedLayers.forEach(layer => {
+                if (!map.hasLayer(layer)) map.addLayer(layer);
+            });
+            if (preservedLayers.length > 0) {
+                const group = L.featureGroup(preservedLayers);
+                map.fitBounds(group.getBounds(), { padding: [50, 50] });
+            }
+        }
+        
+        function showAllFeatures() {
+            allLayers.forEach(layer => {
+                if (!map.hasLayer(layer)) map.addLayer(layer);
+            });
+            fitAllFeatures();
+        }
+        
+        function clearMap() {
+            allLayers.forEach(layer => map.removeLayer(layer));
+            beforeLayers.forEach(layer => map.removeLayer(layer));
+            afterLayers.forEach(layer => map.removeLayer(layer));
+            allLayers = [];
+            beforeLayers = [];
+            afterLayers = [];
+            displacedLayers = [];
+            preservedLayers = [];
+        }
+        
+        // View Toggle Functions
+        function showAfterView() {
+            currentView = 'after';
+            // Remove all layers
+            beforeLayers.forEach(layer => map.removeLayer(layer));
+            afterLayers.forEach(layer => map.removeLayer(layer));
+            // Show only after layers
+            afterLayers.forEach(layer => map.addTo(layer));
+            // Update button states
+            document.getElementById('btnAfter').classList.add('active');
+            document.getElementById('btnBefore').classList.remove('active');
+            document.getElementById('btnBoth').classList.remove('active');
+        }
+        
+        function showBeforeView() {
+            currentView = 'before';
+            // Remove all layers
+            beforeLayers.forEach(layer => map.removeLayer(layer));
+            afterLayers.forEach(layer => map.removeLayer(layer));
+            // Show only before layers
+            beforeLayers.forEach(layer => layer.addTo(map));
+            // Update button states
+            document.getElementById('btnBefore').classList.add('active');
+            document.getElementById('btnAfter').classList.remove('active');
+            document.getElementById('btnBoth').classList.remove('active');
+        }
+        
+        function showBothViews() {
+            currentView = 'both';
+            // Remove all layers first
+            beforeLayers.forEach(layer => map.removeLayer(layer));
+            afterLayers.forEach(layer => map.removeLayer(layer));
+            // Show before layers first (dashed gray, lower z-index)
+            beforeLayers.forEach(layer => layer.addTo(map));
+            // Then show after layers (colored, higher z-index)
+            afterLayers.forEach(layer => layer.addTo(map));
+            // Update button states
+            document.getElementById('btnBoth').classList.add('active');
+            document.getElementById('btnAfter').classList.remove('active');
+            document.getElementById('btnBefore').classList.remove('active');
+        }
+        
+        // Tools Menu Functions
+        function toggleToolsMenu() {
+            const dropdown = document.getElementById('toolsDropdown');
+            dropdown.classList.toggle('show');
+        }
+        
+        function openTool(toolName) {
+            const dropdown = document.getElementById('toolsDropdown');
+            dropdown.classList.remove('show');
+            
+            switch(toolName) {
+                case 'analysis':
+                    window.open('analysis_tool.html', '_blank');
+                    break;
+                case 'googlemaps':
+                    window.open('google_maps_integration.html', '_blank');
+                    break;
+                case 'docs':
+                    window.open('VISUALIZER_ENHANCEMENT_SUMMARY.md', '_blank');
+                    break;
+            }
+        }
+        
+        // Close tools dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            const toolsMenu = document.querySelector('.tools-menu');
+            const dropdown = document.getElementById('toolsDropdown');
+            
+            if (toolsMenu && !toolsMenu.contains(event.target)) {
+                dropdown.classList.remove('show');
+            }
+        });
+    </script>
+</body>
+</html>

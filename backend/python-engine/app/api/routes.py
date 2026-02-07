@@ -166,3 +166,41 @@ async def analyze_pair(feature1_index: int, feature2_index: int, request: Geomet
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Pair analysis error: {str(e)}")
+
+
+@router.post("/process-googlemaps", response_model=GeometryResponse)
+async def process_googlemaps_features(request: GeometryRequest) -> GeometryResponse:
+    """
+    Process Google Maps features with real-world coordinates
+    
+    This endpoint specifically handles features from Google Maps integration,
+    processing real lat/lng coordinates and applying displacement resolution.
+    
+    Args:
+        request: Geometry processing request with features containing WKT geometries
+        
+    Returns:
+        Processed geometries with displacement, depth metadata, and explanations
+    """
+    try:
+        # Process geometries using the same engine
+        response = geometry_processor.process_geometries(request)
+        
+        # Add Google Maps specific metadata
+        response.metadata = response.metadata or {}
+        response.metadata.update({
+            "source": "google_maps_api",
+            "coordinate_system": "WGS84",
+            "note": "Real-world coordinates processed from Google Maps"
+        })
+        
+        return response
+    except Exception as e:
+        import traceback
+        import sys
+        print("="*80, file=sys.stderr)
+        print("GOOGLE MAPS PROCESSING ERROR:", file=sys.stderr)
+        traceback.print_exc(file=sys.stderr)
+        print("="*80, file=sys.stderr)
+        raise HTTPException(status_code=500, detail=f"Google Maps processing error: {str(e)}")
+

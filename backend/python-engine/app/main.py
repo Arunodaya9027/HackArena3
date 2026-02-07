@@ -6,7 +6,16 @@ Handles overlap detection, displacement, and topology preservation
 """
 
 import logging
+import sys
 from typing import Dict
+
+# Fix Windows console encoding for emoji support
+if sys.platform == 'win32':
+    try:
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+    except:
+        pass
 
 import uvicorn
 from fastapi import FastAPI, HTTPException, status
@@ -83,7 +92,7 @@ async def global_exception_handler(request, exc):
 async def startup_event():
     """Application startup event"""
     logger.info("🚀 GeoClear AI - Python Geometry Engine starting up...")
-    logger.info("📍 API Documentation available at: http://localhost:8001/docs")
+    logger.info("📍 API Documentation available at: http://localhost:8010/docs")
     logger.info("🔧 Service ready to process geometry conflicts")
 
 
@@ -97,7 +106,7 @@ if __name__ == "__main__":
     uvicorn.run(
         "app.main:app",
         host="0.0.0.0",
-        port=8001,
+        port=8002,
         reload=True,
         log_level="info"
     )

@@ -26,9 +26,9 @@ def check_dependencies():
 
     """Check if required dependencies are installed"""    print("🚀 Starting GeoClear AI - Python Geometry Engine")
 
-    try:    print("📍 API Documentation: http://localhost:8001/docs")
+    try:    print("📍 API Documentation: http://localhost:8010/docs")
 
-        import fastapi    print("📍 Health Check: http://localhost:8001/health")
+        import fastapi    print("📍 Health Check: http://localhost:8010/health")
 
         import shapely    
 
@@ -38,7 +38,7 @@ def check_dependencies():
 
         print("✅ All dependencies installed")        host="0.0.0.0",
 
-        return True        port=8001,
+        return True        port=8010,
 
     except ImportError as e:        log_level="info",
 
@@ -58,15 +58,15 @@ def main():
         sys.exit(1)
     
     print("\n🚀 Starting FastAPI server...")
-    print("📡 Server will be available at: http://localhost:8001")
-    print("📚 API documentation: http://localhost:8001/docs")
+    print("📡 Server will be available at: http://localhost:8010")
+    print("📚 API documentation: http://localhost:8010/docs")
     print("\nPress Ctrl+C to stop\n")
     
     # Start the FastAPI server
     try:
         from app.main import app
         import uvicorn
-        uvicorn.run(app, host="0.0.0.0", port=8001, reload=True)
+        uvicorn.run(app, host="0.0.0.0", port=8010, reload=True)
     except KeyboardInterrupt:
         print("\n\n👋 Server stopped")
     except Exception as e:

@@ -40,7 +40,7 @@ class DepthAssigner:
         
         # Initialize all features with base Z-index
         for feat_dict in features:
-            feature_id = feat_dict['feature'].feature_id
+            feature_id = feat_dict['feature'].id
             priority = feat_dict['feature'].priority
             
             # Highways start with higher base Z
@@ -51,8 +51,8 @@ class DepthAssigner:
         
         # Adjust Z-order based on conflicts
         for overlap in overlaps:
-            feat_a_id = overlap['feature_a'].feature_id
-            feat_b_id = overlap['feature_b'].feature_id
+            feat_a_id = overlap['feature_a'].id
+            feat_b_id = overlap['feature_b'].id
             
             # Higher priority feature gets higher Z
             if overlap['feature_a'].priority == FeaturePriority.HIGHWAY:
@@ -109,13 +109,11 @@ class DepthAssigner:
         feature_z = z_orders.get(feature_id, self.base_z_index)
         
         for overlap in overlaps:
-            if (overlap['feature_a'].feature_id == feature_id or
-                overlap['feature_b'].feature_id == feature_id):
-                
-                other_id = (overlap['feature_b'].feature_id 
-                           if overlap['feature_a'].feature_id == feature_id
-                           else overlap['feature_a'].feature_id)
-                
+            # Extract feature IDs from feature_pair tuple
+            id1, id2 = overlap['feature_pair']
+            
+            if id1 == feature_id or id2 == feature_id:
+                other_id = id2 if id1 == feature_id else id1
                 other_z = z_orders.get(other_id, self.base_z_index)
                 
                 # If Z-orders differ, needs depth cues
@@ -199,7 +197,7 @@ class DepthAssigner:
         
         for feat_dict in features:
             feature = feat_dict['feature']
-            feature_id = feature.feature_id
+            feature_id = feature.id
             priority = feature.priority
             z_index = z_orders[feature_id]
             

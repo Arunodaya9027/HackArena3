@@ -63,6 +63,9 @@ class GeometryRequest(BaseModel):
     """Request for geometry processing"""
     features: List[FeatureInput] = Field(..., description="List of input features")
     min_clearance: float = Field(default=2.0, description="Minimum clearance in points")
+    force_strength: float = Field(default=1.0, description="Force strength for displacement (0.0-2.0)")
+    max_iterations: int = Field(default=100, description="Maximum iterations for force-directed layout")
+    enable_3d_depth: bool = Field(default=False, description="Enable 3D depth features (z-index, shadows)")
     
     class Config:
         json_schema_extra = {
@@ -79,7 +82,10 @@ class GeometryRequest(BaseModel):
                         "priority": "P2_ROAD"
                     }
                 ],
-                "min_clearance": 2.0
+                "min_clearance": 2.0,
+                "force_strength": 1.0,
+                "max_iterations": 100,
+                "enable_3d_depth": False
             }
         }
 
@@ -133,8 +139,11 @@ class DisplacementResult(BaseModel):
 class GeometryResponse(BaseModel):
     """Response containing processed geometry results"""
     results: List[DisplacementResult] = Field(..., description="List of processing results")
-    total_conflicts: int = Field(..., description="Total number of conflicts detected")
-    total_displaced: int = Field(..., description="Total number of features displaced")
+    total_conflicts: int = Field(default=0, description="Total number of conflicts detected")
+    total_displaced: int = Field(default=0, description="Total number of features displaced")
+    total_conflicts_resolved: int = Field(default=0, description="Total conflicts resolved")
+    execution_time_ms: float = Field(default=0.0, description="Processing time in milliseconds")
+    topology_preserved: bool = Field(default=True, description="Whether topology was preserved")
     processing_summary: Dict[str, Any] = Field(default_factory=dict, description="Processing statistics")
     
     class Config:
@@ -164,6 +173,9 @@ class GeometryResponse(BaseModel):
                 ],
                 "total_conflicts": 1,
                 "total_displaced": 1,
+                "total_conflicts_resolved": 1,
+                "execution_time_ms": 45.23,
+                "topology_preserved": True,
                 "processing_summary": {
                     "features_processed": 2,
                     "highways": 1,

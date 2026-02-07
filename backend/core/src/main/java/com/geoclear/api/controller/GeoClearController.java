@@ -48,6 +48,29 @@ public class GeoClearController {
     }
 
     /**
+     * Python engine status check endpoint
+     */
+    @GetMapping("/geoclear/python-status")
+    public ResponseEntity<Map<String, Object>> pythonStatus() {
+        Map<String, Object> status = new HashMap<>();
+
+        boolean isHealthy = geoClearService.isHealthy();
+        status.put("python_engine_status", isHealthy ? "connected" : "disconnected");
+        status.put("endpoint", "http://localhost:8010/api/geometry/process");
+        status.put("health_check_url", "http://localhost:8010/api/geometry/health");
+
+        if (isHealthy) {
+            status.put("message", "Python Geometry Engine is responding");
+            return ResponseEntity.ok(status);
+        } else {
+            status.put("message", "Python Geometry Engine is not responding");
+            status.put("troubleshooting",
+                    "Ensure Python server is running: cd backend/python-engine && python -m app.main");
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(status);
+        }
+    }
+
+    /**
      * Main endpoint: Process geometry to resolve conflicts
      */
     @PostMapping("/geoclear/process")

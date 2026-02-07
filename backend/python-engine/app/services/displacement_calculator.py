@@ -139,3 +139,61 @@ class DisplacementCalculator:
                 result[feature_id] = (total_dx, total_dy)
         
         return result
+
+    def displace_feature(self,
+                        feature_dict: Dict,
+                        conflict_features: List[Dict]) -> Tuple[LineString, List[Tuple[float, float]]]:
+        """
+        Displace a feature away from all conflicting features
+        
+        Args:
+            feature_dict: Dict with 'feature' (FeatureInput) and 'geometry' (LineString)
+            conflict_features: List of conflict dicts with 'feature', 'geometry', 'clearance_violation'
+            
+        Returns:
+            Tuple of (displaced_geometry, displacement_history)
+        """
+        if not conflict_features:
+            return feature_dict['geometry'], []
+        
+        moving_feature = feature_dict['feature']
+        original_geometry = feature_dict['geometry']
+        
+        # Calculate displacement vectors from all conflicts
+        displacement_vectors = []
+        
+        for conflict in conflict_features:
+            fixed_feature = conflict['feature']
+            clearance_needed = conflict['clearance_violation']
+            
+            # Calculate displacement vector for this conflict
+            dx, dy = self.calculate_displacement_for_pair(
+                fixed_feature,
+                moving_feature,
+                clearance_needed
+            )
+            displacement_vectors.append((dx, dy))
+        
+        # Accumulate all displacement vectors
+        total_dx = sum(dx for dx, dy in displacement_vectors)
+        total_dy = sum(dy for dx, dy in displacement_vectors)
+        
+        # Apply displacement to geometry
+        new_coords = [(x + total_dx, y + total_dy) for x, y in original_geometry.coords]
+        displaced_geometry = LineString(new_coords)
+        
+        return displaced_geometry, displacement_vectors
+    
+    def calculate_displacement_magnitude(self, displacement_vector: Tuple[float, float]) -> float:
+        """
+        Calculate the magnitude of a displacement vector
+        
+        Args:
+            displacement_vector: (dx, dy) tuple
+            
+        Returns:
+            Magnitude of the vector
+        """
+        dx, dy = displacement_vector
+        return np.sqrt(dx**2 + dy**2)
+

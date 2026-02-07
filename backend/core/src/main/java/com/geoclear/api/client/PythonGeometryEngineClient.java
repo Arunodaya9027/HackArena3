@@ -71,7 +71,7 @@ public class PythonGeometryEngineClient {
      */
     public boolean isHealthy() {
         try {
-            String healthUrl = pythonEngineUrl + "/health";
+            String healthUrl = pythonEngineUrl + "/api/geometry/health";
             ResponseEntity<String> response = restTemplate.getForEntity(healthUrl, String.class);
             return response.getStatusCode().is2xxSuccessful();
         } catch (Exception e) {

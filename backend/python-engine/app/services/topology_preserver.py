@@ -47,11 +47,11 @@ class TopologyPreserver:
             
             if start_key not in endpoint_registry:
                 endpoint_registry[start_key] = []
-            endpoint_registry[start_key].append(feature.feature_id)
+            endpoint_registry[start_key].append(feature.id)
             
             if end_key not in endpoint_registry:
                 endpoint_registry[end_key] = []
-            endpoint_registry[end_key].append(feature.feature_id)
+            endpoint_registry[end_key].append(feature.id)
         
         # Junctions are points where 3+ features meet
         for coord_key, feature_ids in endpoint_registry.items():
@@ -190,7 +190,7 @@ class TopologyPreserver:
         """
         target_feature = None
         for feat_dict in all_features:
-            if feat_dict['feature'].feature_id == feature_id:
+            if feat_dict['feature'].id == feature_id:
                 target_feature = feat_dict
                 break
         
@@ -204,7 +204,7 @@ class TopologyPreserver:
         connected = []
         
         for feat_dict in all_features:
-            if feat_dict['feature'].feature_id == feature_id:
+            if feat_dict['feature'].id == feature_id:
                 continue  # Skip self
             
             other_geom = feat_dict['geometry']
@@ -216,6 +216,6 @@ class TopologyPreserver:
                 target_start.distance(other_end) < self.snap_tolerance or
                 target_end.distance(other_start) < self.snap_tolerance or
                 target_end.distance(other_end) < self.snap_tolerance):
-                connected.append(feat_dict['feature'].feature_id)
+                connected.append(feat_dict['feature'].id)
         
         return connected

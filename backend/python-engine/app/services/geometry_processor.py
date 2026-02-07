@@ -41,8 +41,7 @@ class GeometryProcessor:
         # Initialize services with request parameters
         self.precision_overlap_detector = PrecisionOverlapDetector(min_clearance=request.min_clearance, strict_mode=True)
         self.displacement_calculator = DisplacementCalculator(
-            force_strength=request.force_strength,
-            max_iterations=request.max_iterations
+            repulsion_strength=request.force_strength
         )
         self.topology_preserver = TopologyPreserver(snap_tolerance=0.1)
         self.depth_assigner = DepthAssigner(shadow_offset_scale=0.5)
@@ -96,7 +95,7 @@ class GeometryProcessor:
         """Parse WKT features into Shapely geometries"""
         parsed = []
         for feature in features:
-            geometry = self.precision_overlap_detector.parse_wkt(feature.wkt_geometry)
+            geometry = self.precision_overlap_detector.parse_wkt(feature.wkt)
             parsed.append({
                 'feature': feature,
                 'geometry': geometry
@@ -115,6 +114,9 @@ class GeometryProcessor:
         """
         results = {}
         
+        # Create a map from feature_id to feature dict for quick lookup
+        feature_map = {feat_dict['feature'].id: feat_dict for feat_dict in parsed_features}
+        
         # Group overlaps by feature that needs to be displaced
         features_to_displace = {}
         
@@ -130,7 +132,7 @@ class GeometryProcessor:
         # Apply displacements
         for feat_dict in parsed_features:
             feature = feat_dict['feature']
-            feature_id = feature.feature_id
+            feature_id = feature.id
             original_geometry = feat_dict['geometry']
             
             if feature_id in features_to_displace:
@@ -140,18 +142,18 @@ class GeometryProcessor:
                 # Prepare conflict features for displacement calculation
                 conflict_features = []
                 for conflict in conflicts:
-                    if conflict['feature_a'].feature_id == feature_id:
-                        conflict_features.append({
-                            'geometry': conflict['geometry_b'],
-                            'feature': conflict['feature_b'],
-                            'clearance_violation': conflict['clearance_violation']
-                        })
-                    else:
-                        conflict_features.append({
-                            'geometry': conflict['geometry_a'],
-                            'feature': conflict['feature_a'],
-                            'clearance_violation': conflict['clearance_violation']
-                        })
+                    # Extract feature IDs from feature_pair tuple
+                    id1, id2 = conflict['feature_pair']
+                    
+                    # Get the other feature (not the one being displaced)
+                    other_id = id2 if id1 == feature_id else id1
+                    other_feat_dict = feature_map[other_id]
+                    
+                    conflict_features.append({
+                        'geometry': other_feat_dict['geometry'],
+                        'feature': other_feat_dict['feature'],
+                        'clearance_violation': self.precision_overlap_detector.min_clearance
+                    })
                 
                 # Calculate displacement
                 displaced_geometry, displacement_history = self.displacement_calculator.displace_feature(
@@ -205,24 +207,27 @@ class GeometryProcessor:
         
         for feature_id, disp_info in displacement_results.items():
             feature = disp_info['feature']
-            original_wkt = feature.wkt_geometry
+            original_wkt = feature.wkt
             displaced_wkt = disp_info['displaced_geometry'].wkt
             
             # Build conflict metadata
             conflict_metadata_list = []
             for conflict in disp_info['conflicts']:
-                other_feature = (conflict['feature_b'] if conflict['feature_a'].feature_id == feature_id
-                               else conflict['feature_a'])
+                # Extract feature IDs from feature_pair tuple
+                id1, id2 = conflict['feature_pair']
+                other_id = id2 if id1 == feature_id else id1
+                
+                # Calculate overlap distance from conflict data
+                overlap_dist = conflict.get('severity_score', 0.0)
                 
                 depth_meta = depth_metadata.get(feature_id, {})
                 
                 conflict_meta = ConflictMetadata(
-                    conflict_pair=(feature_id, other_feature.feature_id),
-                    overlap_distance=conflict['overlap_distance'],
+                    conflict_pair=(feature_id, other_id),
+                    overlap_amount=overlap_dist,
                     displacement_vector=disp_info['displacement_vector'],
                     z_index=depth_meta.get('z_index', 100),
-                    visual_depth_flag=depth_meta.get('visual_depth_flag', False),
-                    shadow_offset=depth_meta.get('shadow_offset')
+                    visual_depth_flag=depth_meta.get('visual_depth_flag', False)
                 )
                 conflict_metadata_list.append(conflict_meta)
             

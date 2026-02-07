@@ -7,6 +7,7 @@ from app.services.geometry_processor import GeometryProcessor
 from app.services.precision_overlap_detector import PrecisionOverlapDetector
 
 router = APIRouter()
+# Geometry processor instance - handles overlap resolution
 geometry_processor = GeometryProcessor()
 precision_detector = PrecisionOverlapDetector(strict_mode=True)
 
@@ -26,6 +27,13 @@ async def process_geometries(request: GeometryRequest) -> GeometryResponse:
         response = geometry_processor.process_geometries(request)
         return response
     except Exception as e:
+        import traceback
+        import sys
+        print("="*80, file=sys.stderr)
+        print("FULL TRACEBACK:", file=sys.stderr)
+        traceback.print_exc(file=sys.stderr)
+        print("="*80, file=sys.stderr)
+        traceback.print_exc()  # Print full traceback to console
         raise HTTPException(status_code=500, detail=f"Processing error: {str(e)}")
 
 

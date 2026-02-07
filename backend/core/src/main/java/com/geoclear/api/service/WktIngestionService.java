@@ -173,21 +173,220 @@ public class WktIngestionService {
     }
 
     /**
-     * Simple heuristic to detect priority based on feature length
+     * Intelligent multi-factor heuristic to detect feature priority
+     * Uses geometric properties to classify into 13 distinct categories
+     * 
+     * Classification factors:
+     * - Coordinate count (complexity)
+     * - Path length (geometric extent)
+     * - Curvature (straightness vs loops)
+     * - Coordinate density (detail level)
+     * - Bounding box aspect ratio
      */
     private FeaturePriority detectPriority(String wkt) {
-        // Count commas to estimate number of coordinates
-        int coordinateCount = wkt.split(",").length;
+        try {
+            // Extract coordinates from WKT
+            String coordsStr = wkt.replaceAll("LINESTRING\\s*\\(", "").replaceAll("\\)", "").trim();
+            String[] coordPairs = coordsStr.split(",");
 
-        // Longer features (more coordinates) assumed to be highways
-        return coordinateCount > 10 ? FeaturePriority.P1_HIGHWAY : FeaturePriority.P2_ROAD;
+            int coordCount = coordPairs.length;
+
+            // Parse coordinates for geometric analysis
+            double[][] coords = new double[coordCount][2];
+            for (int i = 0; i < coordCount; i++) {
+                String[] xy = coordPairs[i].trim().split("\\s+");
+                if (xy.length >= 2) {
+                    coords[i][0] = Double.parseDouble(xy[0]);
+                    coords[i][1] = Double.parseDouble(xy[1]);
+                }
+            }
+
+            // Calculate geometric metrics
+            double pathLength = calculatePathLength(coords);
+            double curvature = calculateCurvature(coords);
+            double[] bbox = getBoundingBox(coords);
+            double aspectRatio = (bbox[2] - bbox[0]) / Math.max(bbox[3] - bbox[1], 0.001);
+
+            // Decision tree classification
+
+            // P1: Critical Infrastructure
+            if (coordCount > 20 && pathLength > 500 && curvature < 0.1) {
+                return FeaturePriority.P1_HIGHWAY; // Long, straight, complex = Highway
+            }
+
+            if (coordCount > 15 && Math.abs(aspectRatio - 1.0) < 0.3 && pathLength > 300) {
+                return FeaturePriority.P1_RAILWAY; // Long, balanced, moderate complexity = Railway
+            }
+
+            if (coordCount > 30 && curvature > 0.3) {
+                return FeaturePriority.P1_RIVER; // Very complex, curvy = River
+            }
+
+            // P2: Major Roads
+            if (coordCount > 12 && pathLength > 200 && curvature < 0.2) {
+                return FeaturePriority.P2_MAIN_ROAD; // Moderately long, straight = Main Road
+            }
+
+            // P3: Local Streets
+            if (coordCount > 8 && pathLength > 100 && curvature < 0.25) {
+                return FeaturePriority.P3_LOCAL_ROAD; // Medium length, fairly straight = Local Road
+            }
+
+            if (coordCount > 5 && pathLength > 50) {
+                return FeaturePriority.P3_STREET; // Short-medium length = Street
+            }
+
+            // P4: Structures
+            if (coordCount > 6 && isClosedLoop(coords)) {
+                return FeaturePriority.P4_BUILDING; // Closed loop = Building
+            }
+
+            if (coordCount > 10 && curvature > 0.4 && pathLength < 300) {
+                return FeaturePriority.P4_PARK; // Curvy, medium size = Park boundary
+            }
+
+            // P5: Decorative Elements
+            if (coordCount <= 3 && pathLength < 20) {
+                return FeaturePriority.P5_ICON; // Very short, simple = Icon marker
+            }
+
+            if (coordCount <= 4 && pathLength < 30) {
+                return FeaturePriority.P5_LABEL; // Short, simple = Label marker
+            }
+
+            // Default fallback
+            return FeaturePriority.P3_STREET; // Default to street for unknown cases
+
+        } catch (Exception e) {
+            logger.warn("Error detecting priority for WKT, defaulting to P3_STREET: {}", e.getMessage());
+            return FeaturePriority.P3_STREET;
+        }
     }
 
     /**
-     * Generate feature ID
+     * Calculate total path length from coordinates
+     */
+    private double calculatePathLength(double[][] coords) {
+        double totalLength = 0.0;
+        for (int i = 1; i < coords.length; i++) {
+            double dx = coords[i][0] - coords[i - 1][0];
+            double dy = coords[i][1] - coords[i - 1][1];
+            totalLength += Math.sqrt(dx * dx + dy * dy);
+        }
+        return totalLength;
+    }
+
+    /**
+     * Calculate average curvature (0 = straight, higher = more curved)
+     * Uses angle changes between consecutive segments
+     */
+    private double calculateCurvature(double[][] coords) {
+        if (coords.length < 3)
+            return 0.0;
+
+        double totalAngleChange = 0.0;
+        int angleCount = 0;
+
+        for (int i = 1; i < coords.length - 1; i++) {
+            // Calculate vectors
+            double v1x = coords[i][0] - coords[i - 1][0];
+            double v1y = coords[i][1] - coords[i - 1][1];
+            double v2x = coords[i + 1][0] - coords[i][0];
+            double v2y = coords[i + 1][1] - coords[i][1];
+
+            // Calculate angle between vectors
+            double dot = v1x * v2x + v1y * v2y;
+            double mag1 = Math.sqrt(v1x * v1x + v1y * v1y);
+            double mag2 = Math.sqrt(v2x * v2x + v2y * v2y);
+
+            if (mag1 > 0.001 && mag2 > 0.001) {
+                double cosAngle = dot / (mag1 * mag2);
+                // Clamp to [-1, 1] to handle floating point errors
+                cosAngle = Math.max(-1.0, Math.min(1.0, cosAngle));
+                double angle = Math.acos(cosAngle);
+                totalAngleChange += angle;
+                angleCount++;
+            }
+        }
+
+        return angleCount > 0 ? totalAngleChange / angleCount : 0.0;
+    }
+
+    /**
+     * Check if path forms a closed loop
+     */
+    private boolean isClosedLoop(double[][] coords) {
+        if (coords.length < 4)
+            return false;
+
+        double dx = coords[0][0] - coords[coords.length - 1][0];
+        double dy = coords[0][1] - coords[coords.length - 1][1];
+        double distance = Math.sqrt(dx * dx + dy * dy);
+
+        // Consider closed if start/end are within 1 unit
+        return distance < 1.0;
+    }
+
+    /**
+     * Get bounding box [minX, minY, maxX, maxY]
+     */
+    private double[] getBoundingBox(double[][] coords) {
+        double minX = Double.MAX_VALUE, minY = Double.MAX_VALUE;
+        double maxX = Double.MIN_VALUE, maxY = Double.MIN_VALUE;
+
+        for (double[] coord : coords) {
+            minX = Math.min(minX, coord[0]);
+            minY = Math.min(minY, coord[1]);
+            maxX = Math.max(maxX, coord[0]);
+            maxY = Math.max(maxY, coord[1]);
+        }
+
+        return new double[] { minX, minY, maxX, maxY };
+    }
+
+    /**
+     * Generate feature ID based on priority
      */
     private String generateFeatureId(FeaturePriority priority, int sequence) {
-        String prefix = priority == FeaturePriority.P1_HIGHWAY ? "highway" : "road";
+        String prefix;
+        switch (priority) {
+            case P1_HIGHWAY:
+                prefix = "highway";
+                break;
+            case P1_RAILWAY:
+                prefix = "railway";
+                break;
+            case P1_RIVER:
+                prefix = "river";
+                break;
+            case P2_MAIN_ROAD:
+                prefix = "main_road";
+                break;
+            case P3_LOCAL_ROAD:
+                prefix = "local_road";
+                break;
+            case P3_STREET:
+                prefix = "street";
+                break;
+            case P4_BUILDING:
+                prefix = "building";
+                break;
+            case P4_PARK:
+                prefix = "park";
+                break;
+            case P5_LABEL:
+                prefix = "label";
+                break;
+            case P5_ICON:
+                prefix = "icon";
+                break;
+            case P5_OVERLAP_AREA:
+                prefix = "overlap";
+                break;
+            default:
+                prefix = "feature";
+                break;
+        }
         return String.format("%s_%03d", prefix, sequence);
     }
 

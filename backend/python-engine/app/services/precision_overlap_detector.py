@@ -14,8 +14,29 @@ from ..models.geometry_models import FeatureInput, FeaturePriority
 
 # Feature width constants (display width in points)
 FEATURE_WIDTHS = {
-    FeaturePriority.P1_HIGHWAY: 5.0,  # Highway width: 5pt
-    FeaturePriority.P2_ROAD: 3.0       # Road width: 3pt
+    # P1: Critical Infrastructure (Highest Priority)
+    FeaturePriority.P1_HIGHWAY: 5.0,       # Highways/Expressways
+    FeaturePriority.P1_RAILWAY: 4.5,       # Railway Lines
+    FeaturePriority.P1_RIVER: 4.0,         # Rivers/Water Bodies
+    
+    # P2: Major Roads
+    FeaturePriority.P2_MAIN_ROAD: 3.5,     # Main Roads/Avenues
+    
+    # P3: Local Roads
+    FeaturePriority.P3_LOCAL_ROAD: 3.0,    # Local Roads/Streets
+    FeaturePriority.P3_STREET: 2.8,        # Streets/Lanes
+    
+    # P4: Structures
+    FeaturePriority.P4_BUILDING: 2.5,      # Buildings/Structures
+    FeaturePriority.P4_PARK: 2.5,          # Parks/Green Spaces
+    
+    # P5: Decorative Elements (Lowest Priority)
+    FeaturePriority.P5_LABEL: 2.0,         # Text Labels
+    FeaturePriority.P5_ICON: 2.0,          # Map Icons
+    FeaturePriority.P5_OVERLAP_AREA: 1.5,  # Overlap Areas
+    
+    # Backward compatibility (deprecated)
+    FeaturePriority.P2_ROAD: 3.0           # Generic Road (Legacy)
 }
 
 

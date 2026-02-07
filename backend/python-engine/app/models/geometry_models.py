@@ -8,9 +8,39 @@ from enum import Enum
 
 
 class FeaturePriority(str, Enum):
-    """Feature priority levels"""
-    P1_HIGHWAY = "P1_HIGHWAY"  # Width 5pt
-    P2_ROAD = "P2_ROAD"        # Width 3pt
+    """
+    Enhanced Feature Priority System - Multi-category Classification
+    
+    Priority Hierarchy (Lower number = Higher importance):
+    P1: Critical Infrastructure (Highways, Railways, Rivers)
+    P2: Major Roads (Main Roads)
+    P3: Local Streets (Local Roads, Streets)
+    P4: Structures (Buildings, Parks)
+    P5: Decorative (Icons, Labels, Overlap Areas)
+    """
+    # P1: Critical Infrastructure (Highest Priority)
+    P1_HIGHWAY = "P1_HIGHWAY"              # Width 5.0pt - Highways/Expressways
+    P1_RAILWAY = "P1_RAILWAY"              # Width 4.5pt - Railway Lines
+    P1_RIVER = "P1_RIVER"                  # Width 4.0pt - Rivers/Water Bodies
+    
+    # P2: Major Roads
+    P2_MAIN_ROAD = "P2_MAIN_ROAD"          # Width 3.5pt - Main Roads/Avenues
+    
+    # P3: Local Roads
+    P3_LOCAL_ROAD = "P3_LOCAL_ROAD"        # Width 3.0pt - Local Roads/Streets
+    P3_STREET = "P3_STREET"                # Width 2.8pt - Streets/Lanes
+    
+    # P4: Structures
+    P4_BUILDING = "P4_BUILDING"            # Width 2.5pt - Buildings/Structures
+    P4_PARK = "P4_PARK"                    # Width 2.5pt - Parks/Green Spaces
+    
+    # P5: Decorative Elements (Lowest Priority)
+    P5_LABEL = "P5_LABEL"                  # Width 2.0pt - Text Labels
+    P5_ICON = "P5_ICON"                    # Width 2.0pt - Map Icons
+    P5_OVERLAP_AREA = "P5_OVERLAP_AREA"    # Width 1.5pt - Overlap Areas
+    
+    # Backward compatibility (deprecated)
+    P2_ROAD = "P2_ROAD"                    # Width 3.0pt - Generic Road (Legacy)
 
 
 class FeatureInput(BaseModel):

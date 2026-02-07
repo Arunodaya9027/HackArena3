@@ -43,8 +43,8 @@ app.add_middleware(
 )
 
 
-# Include API routes from routes.py
-app.include_router(router)
+# Include API routes from routes.py with /api/geometry prefix
+app.include_router(router, prefix="/api/geometry")
 
 
 @app.get("/")
